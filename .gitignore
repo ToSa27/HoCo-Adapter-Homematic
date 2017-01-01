@@ -35,3 +35,10 @@ jspm_packages
 
 # Optional REPL history
 .node_repl_history
+
+# hoco setup config (template included in repo)
+config.sh
+
+# hoco app config (created by setup.sh)
+config.json
+

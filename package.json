@@ -1,0 +1,25 @@
+{
+  "name": "hoco-homematic",
+  "version": "1.0.0",
+  "description": "HoCo Adapter Homematic",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ToSa27/HoCo-Adapter-Homematic.git"
+  },
+  "keywords": [
+    "HoCo"
+  ],
+  "author": "Tobias Hoff",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/ToSa27/HoCo-Adapter-Homematic/issues"
+  },
+  "homepage": "https://github.com/ToSa27/HoCo-Adapter-Homematic#readme",
+  "dependencies": {
+    "mqtt": "^2.1.3"
+  }
+}
