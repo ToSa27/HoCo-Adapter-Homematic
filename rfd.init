@@ -1,0 +1,51 @@
+#! /bin/sh
+### BEGIN INIT INFO
+# Provides:          rfd
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: HomeMatic rfd
+# Description:       HomeMatic BidCoS-RF interface process
+### END INIT INFO
+
+PATH=/sbin:/usr/sbin:/bin:/usr/bin:{{HOCO_HOMEMATIC_HOME}}/bin
+DESC="HomeMatic BidCoS-RF interface process"
+NAME=rfd
+DAEMON={{HOCO_HOMEMATIC_HOME}}/bin/$NAME
+DAEMON_ARGS="-f {{HOCO_HOMEMATIC_HOME}}/etc/rfd.conf -d"
+PIDFILE={{HOCO_HOMEMATIC_HOME}}/var/rfd/$NAME.pid
+SCRIPTNAME=/etc/init.d/$NAME
+USER=hoco
+
+[ -x "$DAEMON" ] || exit 0
+
+. /lib/init/vars.sh
+. /lib/lsb/init-functions
+
+if [ ! -d /sys/class/gpio/gpio18 ] ; then
+  echo 18 > /sys/class/gpio/export
+  echo out > /sys/class/gpio/gpio18/direction
+fi
+
+case "$1" in
+  start)
+    log_daemon_msg "Starting $DESC" "$NAME"
+    chown root:dialout /dev/mmd_bidcos
+    chmod 660 /dev/mmd_bidcos
+    start-stop-daemon --start --quiet -c $USER --exec $DAEMON -- $DAEMON_ARGS
+    ;;
+  stop)
+    log_daemon_msg "Stopping $DESC" "$NAME"
+    start-stop-daemon -K -q -u $USER -n $NAME
+    ;;
+  status)
+    status_of_proc "$DAEMON" "$NAME" && exit 0 || exit $?
+    ;;
+  *)
+    echo "Usage: $SCRIPTNAME {start|stop|status}" >&2
+    exit 3
+    ;;
+esac
+
+:
