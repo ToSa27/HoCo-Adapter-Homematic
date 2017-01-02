@@ -1,20 +1,20 @@
 #! /bin/sh
 ### BEGIN INIT INFO
 # Provides:          rfd
-# Required-Start:    $remote_fs $syslog
-# Required-Stop:     $remote_fs $syslog
+# Required-Start:    $remote_fs $syslog multimacd
+# Required-Stop:     $remote_fs $syslog multimacd
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 # Short-Description: HomeMatic rfd
 # Description:       HomeMatic BidCoS-RF interface process
 ### END INIT INFO
 
-PATH=/sbin:/usr/sbin:/bin:/usr/bin:{{HOCO_HOMEMATIC_HOME}}/bin
+PATH=/sbin:/usr/sbin:/bin:/usr/bin:<<HOCO_HOMEMATIC_HOME>>/bin
 DESC="HomeMatic BidCoS-RF interface process"
 NAME=rfd
-DAEMON={{HOCO_HOMEMATIC_HOME}}/bin/$NAME
-DAEMON_ARGS="-f {{HOCO_HOMEMATIC_HOME}}/etc/rfd.conf -d"
-PIDFILE={{HOCO_HOMEMATIC_HOME}}/var/rfd/$NAME.pid
+DAEMON=<<HOCO_HOMEMATIC_HOME>>/bin/$NAME
+DAEMON_ARGS="-f <<HOCO_HOMEMATIC_HOME>>/etc/rfd.conf -d"
+PIDFILE=<<HOCO_HOMEMATIC_HOME>>/var/rfd/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 USER=hoco
 

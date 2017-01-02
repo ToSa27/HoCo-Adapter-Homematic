@@ -22,6 +22,7 @@ cp -R $HOCO_HOMEMATIC_HOME/src/occu/arm-gnueabihf/packages-eQ-3/RFD/bin $HOCO_HO
 cp $HOCO_HOMEMATIC_HOME/src/occu/arm-gnueabihf/packages-eQ-3/LinuxBasis/bin/eq3configcmd $HOCO_HOMEMATIC_HOME/bin/
 cp $HOCO_HOMEMATIC_HOME/src/occu/arm-gnueabihf/packages-eQ-3/LinuxBasis/lib/libeq3config.so $HOCO_HOMEMATIC_HOME/lib/
 
+SETUP_PWD=$PWD
 cp -R $HOCO_HOMEMATIC_HOME/src/RaspberryMatic/buildroot-external/package/homematic/kernel-modules/bcm2835_raw_uart $HOCO_HOMEMATIC_HOME/src/
 cd $HOCO_HOMEMATIC_HOME/src/bcm2835_raw_uart
 make
@@ -31,6 +32,7 @@ cd $HOCO_HOMEMATIC_HOME/src/eq3_char_loop
 make
 sudo make -C /lib/modules/`uname -r`/build M=$HOCO_HOMEMATIC_HOME/src/eq3_char_loop modules_install
 sudo depmod
+cd $SETUP_PWD
 
 sudo su -c "echo 'PATH=\$PATH:'$HOCO_HOMEMATIC_HOME'/bin' > /etc/profile.d/homematic.sh"
 sudo su -c "echo 'export PATH' >> /etc/profile.d/homematic.sh"
@@ -44,26 +46,27 @@ sudo su -c "echo 'dtparam=uart1=off' >> /boot/config.txt"
 sudo su -c "echo ''$HOCO_HOMEMATIC_HOME'/lib/' > /etc/ld.so.conf.d/homematic.conf"
 sudo ldconfig
 
-cd "${0%/*}"
 cp multimacd.conf $HOCO_HOMEMATIC_HOME/etc/
-sed -i 's/\{\{HOCO_HOMEMATIC_HOME\}\}/$HOCO_HOMEMATIC_HOME/g' $HOCO_HOMEMATIC_HOME/etc/multimacd.conf
+sed -i "s|<<HOCO_HOMEMATIC_HOME>>|$HOCO_HOMEMATIC_HOME|g" $HOCO_HOMEMATIC_HOME/etc/multimacd.conf
 cp rfd.conf $HOCO_HOMEMATIC_HOME/etc/
-sed -i 's/\{\{HOCO_HOMEMATIC_HOME\}\}/$HOCO_HOMEMATIC_RFD_PORT/g' $HOCO_HOMEMATIC_RFD_PORT/etc/rfd.conf
-sed -i 's/\{\{HOCO_HOMEMATIC_HOME\}\}/$HOCO_HOMEMATIC_HOME/g' $HOCO_HOMEMATIC_HOME/etc/rfd.conf
+sed -i "s|<<HOCO_HOMEMATIC_RFD_PORT>>|$HOCO_HOMEMATIC_RFD_PORT|g" $HOCO_HOMEMATIC_HOME/etc/rfd.conf
+sed -i "s|<<HOCO_HOMEMATIC_HOME>>|$HOCO_HOMEMATIC_HOME|g" $HOCO_HOMEMATIC_HOME/etc/rfd.conf
 cp crRFD.conf $HOCO_HOMEMATIC_HOME/etc/
-sed -i 's/\{\{HOCO_HOMEMATIC_HOME\}\}/$HOCO_HOMEMATIC_HOME/g' $HOCO_HOMEMATIC_HOME/etc/crRFD.conf
+sed -i "s|<<HOCO_HOMEMATIC_HOME>>|$HOCO_HOMEMATIC_HOME|g" $HOCO_HOMEMATIC_HOME/etc/crRFD.conf
 sudo cp multimacd.init /etc/init.d/multimacd
-sudo sed -i 's/\{\{HOCO_HOMEMATIC_HOME\}\}/$HOCO_HOMEMATIC_HOME/g' /etc/init.d/multimacd
+sudo sed -i "s|<<HOCO_HOMEMATIC_HOME>>|$HOCO_HOMEMATIC_HOME|g" /etc/init.d/multimacd
 sudo chmod a+x /etc/init.d/multimacd
 sudo update-rc.d multimacd defaults
 sudo cp rfd.init /etc/init.d/rfd
-sudo sed -i 's/\{\{HOCO_HOMEMATIC_HOME\}\}/$HOCO_HOMEMATIC_HOME/g' /etc/init.d/rfd
+sudo sed -i "s|<<HOCO_HOMEMATIC_HOME>>|$HOCO_HOMEMATIC_HOME|g" /etc/init.d/rfd
 sudo chmod a+x /etc/init.d/rfd
 sudo update-rc.d rfd defaults
 
 sudo systemctl daemon-reload
 
-cd "${0%/*}"
+sudo systemctl start multimacd
+sudo systemctl start rfd
+
 npm install
 echo '{' > config.json
 echo ' "mqtt": {'>> config.json
