@@ -1,9 +1,9 @@
 var config = require("./config.js");
 var log = require("./log.js");
 var Bus = require("./bus.js");
-var Homematic = require("./homematic.js");
+var Homematic = require("./homematicip.js");
 
-var adaptertype = "homematic";
+var adaptertype = "homematicip";
 var adapterid;
 
 var bus;

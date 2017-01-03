@@ -25,21 +25,12 @@ SCRIPTNAME=/etc/init.d/$NAME
 case "$1" in
   start)
     log_daemon_msg "Starting $DESC" "$NAME"
-    insmod /lib/modules/`uname -r`/extra/bcm2835_raw_uart.ko
+    modprobe bcm2835_raw_uart
     chown root:dialout /dev/bcm2835-raw-uart
     chmod 660 /dev/bcm2835-raw-uart
-    insmod /lib/modules/`uname -r`/extra/eq3_char_loop.ko
+    modprobe eq3_char_loop
     chown root:dialout /dev/eq3loop
     chmod 660 /dev/eq3loop
-    RF_SERIAL=$(eq3configcmd update-coprocessor -p /dev/bcm2835-raw-uart -c -se 2>&1 | grep "SerialNumber:" | cut -d' ' -f5)
-    echo "${RF_SERIAL}" > <<HOCO_HOMEMATIC_HOME>>/var/board_serial
-    chmod 644 <<HOCO_HOMEMATIC_HOME>>/var/board_serial
-    RF_VERSION=$(eq3configcmd update-coprocessor -p /dev/bcm2835-raw-uart -c -v 2>&1 | grep "Version:" | cut -d' ' -f5)
-    echo "${RF_VERSION}" > <<HOCO_HOMEMATIC_HOME>>/var/rf_firmware_version
-    chmod 644 <<HOCO_HOMEMATIC_HOME>>/var/rf_firmware_version
-    RF_ADDRESS=$(eq3configcmd read-default-rf-address -f /dev/bcm2835-raw-uart -h 2>&1 | grep "^0x")
-    echo "${RF_ADDRESS}" > <<HOCO_HOMEMATIC_HOME>>/var/rf_address
-    chmod 644 <<HOCO_HOMEMATIC_HOME>>/var/rf_address
     start-stop-daemon -S -N -10 -q -b -m -p $PIDFILE --exec $DAEMON -- $DAEMON_ARGS
     ;;
   stop)

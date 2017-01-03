@@ -68,7 +68,7 @@ function Bus(config, adaptertype, adapterid) {
 // outgoingEmpty
 
 	_mqtt.on('message', function (topic, message) {
-		log.info("bus rx: " + topic + " = " + message);
+//		log.info("bus rx: " + topic + " = " + message);
 // ToDo: handle system wide topics like $time etc.
 		if (!topic.startsWith(_prefix + "/"))
 			return;

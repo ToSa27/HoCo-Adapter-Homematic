@@ -20,6 +20,8 @@
   },
   "homepage": "https://github.com/ToSa27/HoCo-Adapter-Homematic#readme",
   "dependencies": {
+    "binrpc": "^1.0.0",
+    "homematic-xmlrpc": "^1.0.2",
     "mqtt": "^2.1.3"
   }
 }

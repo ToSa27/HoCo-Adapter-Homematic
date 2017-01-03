@@ -1,0 +1,46 @@
+#! /bin/sh
+### BEGIN INIT INFO
+# Provides:          hmipserver
+# Required-Start:    $remote_fs $syslog multimacd
+# Required-Stop:     $remote_fs $syslog multimacd
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: HomeMatic hmipserver
+# Description:       HomeMaticIP server process
+### END INIT INFO
+
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+DESC="HomeMaticIP server process"
+NAME=hmipserver
+DAEMON=java
+DAEMON_ARGS="-Xmx128m -Dos.arch=arm -Dlog4j.configuration=file://<<HOCO_HOMEMATIC_HOME>>/etc/log4j.xml -Dfile.encoding=ISO-8859-1 -jar <<HOCO_HOMEMATIC_HOME>>/HMServer/HMIPServer.jar <<HOCO_HOMEMATIC_HOME>>/etc/crRFD.conf <<HOCO_HOMEMATIC_HOME>>/etc/hmserver.conf"
+PIDFILE=<<HOCO_HOMEMATIC_HOME>>/var/rfd/$NAME.pid
+SCRIPTNAME=/etc/init.d/$NAME
+USER=hoco
+
+[ -x "$DAEMON" ] || exit 0
+
+. /lib/init/vars.sh
+. /lib/lsb/init-functions
+
+case "$1" in
+  start)
+    log_daemon_msg "Starting $DESC" "$NAME"
+    chown root:dialout /dev/ttyS0
+    chmod 660 /dev/ttyS0
+    start-stop-daemon -S -q -m -p $PIDFILE -c $USER --exec $DAEMON -- $DAEMON_ARGS &
+    ;;
+  stop)
+    log_daemon_msg "Stopping $DESC" "$NAME"
+    start-stop-daemon -K -q -p $PIDFILE
+    ;;
+  status)
+    status_of_proc "$DAEMON" "$NAME" && exit 0 || exit $?
+    ;;
+  *)
+    echo "Usage: $SCRIPTNAME {start|stop|status}" >&2
+    exit 3
+    ;;
+esac
+
+:
