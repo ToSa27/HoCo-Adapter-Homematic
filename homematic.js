@@ -4,38 +4,33 @@ const log = require("./log.js");
 const xmlrpc = require('homematic-xmlrpc');
 const binrpc = require('binrpc');
 
-var _interfaceid;
-var _server;
-var _client;
-var _config;
-var _connected = false;
-
 function Homematic(config) {
 	log.info("homematic config: " + JSON.stringify(config));
 	EventEmitter.call(this);
 	var self = this;
-	_config = config;
-	_interfaceid = _config.module_serial;
+	this.config = config;
+	this.id = this.config.module_serial;
+	this.connected = false;
 
-	if (_config.protocol == 'binrpc') {
-	        _server = binrpc.createServer({
-        	        host: _config.interface_host,
-                	port: _config.interface_port
+	if (this.config.protocol == 'binrpc') {
+	        this.server = binrpc.createServer({
+        	        host: this.config.interface_host,
+                	port: this.config.interface_port
         });
-	} else if (_config.protocol == 'xmlrpc') {
-	        _server = xmlrpc.createServer({
-        	        host: _config.interface_host,
-                	port: _config.interface_port
+	} else if (this.config.protocol == 'xmlrpc') {
+	        this.server = xmlrpc.createServer({
+        	        host: this.config.interface_host,
+                	port: this.config.interface_port
         });
 	} else {
-		log.err('unknown protocol: ' + _config.protocol);
+		log.err('unknown protocol: ' + this.config.protocol);
 	}
 
-	_server.on('NotFound', function (method, params) {
+	this.server.on('NotFound', function (method, params) {
 		log.warn('homematic server not found');
 	});
 
-	_server.on('system.multicall', function (method, params, callback) {
+	this.server.on('system.multicall', function (method, params, callback) {
 		log.info('homematic server system multicall: ' + method + JSON.stringify(params));
 		var response = [];
 		for (var i = 0; i < params[0].length; i++) {
@@ -49,76 +44,80 @@ function Homematic(config) {
 		callback(null, response);
 	});
 
-	_server.on('event', function (err, params, callback) {
+	this.server.on('event', function (err, params, callback) {
 		log.info('homematic server event');
 		lastEvent = (new Date()).getTime();
 		callback(null, rpcMethods.event(err, params));
 	});
 
-	_server.on('newDevices', function (err, params, callback) {
+	this.server.on('newDevices', function (err, params, callback) {
                 log.info('homematic server new device');
 		callback(null, rpcMethods.newDevices(err, params));
 	});
 
-	_server.on('deleteDevices', function(err, params, callback) {
+	this.server.on('deleteDevices', function(err, params, callback) {
                 log.info('homematic server delete device');
 		callback(null, rpcMethods.deleteDevices(err, params));
 	});
 
-	_server.on('replaceDevice', function(err, params, callback) {
+	this.server.on('replaceDevice', function(err, params, callback) {
                 log.info('homematic server replace device');
 		callback(null, rpcMethods.replaceDevice(err, params));
 	});
 
-	_server.on('listDevices', function(err, params, callback) {
+	this.server.on('listDevices', function(err, params, callback) {
                 log.info('homematic server list devices');
 		callback(null, rpcMethods.listDevices(err, params));
 	});
 
-	_server.on('system.listMethods', function(err, params, callback) {
+	this.server.on('system.listMethods', function(err, params, callback) {
                 log.info('homematic server system list methods');
 		callback(null, rpcMethods['system.listMethods'](err, params));
 	});
 
-	if (_config.protocol == 'binrpc') {
-		_client = binrpc.createClient({
-		        host: _config.rfd_host,
-        		port: _config.rfd_port,
+	if (this.config.protocol == 'binrpc') {
+		this.client = binrpc.createClient({
+		        host: this.config.rfd_host,
+        		port: this.config.rfd_port,
         		path: '/'
 		});
 	} else {
-                _client = xmlrpc.createClient({
-                        host: _config.rfd_host,
-                        port: _config.rfd_port,
+                this.client = xmlrpc.createClient({
+                        host: this.config.rfd_host,
+                        port: this.config.rfd_port,
                         path: '/'
                 });
 	}
 
-	if (_config.protocol == 'binrpc') {
-		_client.on('connect', function () {
-			var initUrl = 'xmlrpc_bin://' + _config.interface_host + ':' + _config.interface_port;
-			rpcSend('init', [initUrl, _interfaceid], function(err, data) {
+	if (this.config.protocol == 'binrpc') {
+		this.client.on('connect', function () {
+			var initUrl = 'xmlrpc_bin://' + self.config.interface_host + ':' + self.config.interface_port;
+log.info("bin url: " + initUrl);
+log.info("bin config: " + JSON.stringify(this.config));
+			rpcSend(self.client, 'init', [initUrl, self.id], function(err, data) {
 				if (err) {
-					_connected = false;
+					self.connected = false;
 					self.emit("disconnected");
 				} else {
-			                _connected = true;
-	         			self.emit("connected", _config.module_serial);
+			                self.connected = true;
+	         			self.emit("connected", this.id);
 				}
 			});
 		});
-	        _client.on('error', function (e) {
+	        this.client.on('error', function (e) {
 	                log.err(e);
 	        });
 	} else {
-                var initUrl = 'http://' + _config.interface_host + ':' + _config.interface_port;
-                rpcSend('init', [initUrl, _interfaceid], function(err, data) {
+                var initUrl = 'http://' + self.config.interface_host + ':' + self.config.interface_port;
+log.info("xml url: " + initUrl);
+log.info("xml config: " + JSON.stringify(this.config));
+                rpcSend(self.client, 'init', [initUrl, self.id], function(err, data) {
                         if (err) {
-                                _connected = false;
+                                self.connected = false;
                                 self.emit("disconnected");
                         } else {
-                                _connected = true;
-                                self.emit("connected", _config.module_serial);
+                                self.connected = true;
+                                self.emit("connected", this.id);
                         }
                 });
 	}
@@ -126,7 +125,7 @@ function Homematic(config) {
 
 util.inherits(Homematic, EventEmitter)
 
-function rpcSend(fn, args, cb) {
+function rpcSend(client, fn, args, cb) {
         var msg = 'RPC -> ' + fn + '(';
         for (var i = 0; i < args.length; i++) {
                 if (i > 0)
@@ -135,7 +134,7 @@ function rpcSend(fn, args, cb) {
         }
         msg += ')';
         log.info(msg);
-	_client.methodCall(fn, args, function(err, data) {
+	client.methodCall(fn, args, function(err, data) {
                 if (err)
                         log.err('    <- ' + fn + ' error ' + JSON.stringify(err));
                 else
@@ -202,15 +201,17 @@ var rpcMethods = {
         }
 };
 
+/*
 Homematic.prototype.connected = function() {
-        return _connected;
+        return this.connected;
 };
+*/
 
 Homematic.prototype.adapter = function(command, message) {
 	log.info('homematic adapter: ' + command + ': ' + message);
         switch (command) {
                 case "learn":
-                        rpcSend('setInstallMode', [true, 30, 1], function(err, data) {});
+                        rpcSend(this.client, 'setInstallMode', [true, 30], function(err, data) {});
                         break;
         }
 };

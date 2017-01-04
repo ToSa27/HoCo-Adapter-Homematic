@@ -95,25 +95,32 @@ echo '  "username": "'${HOCO_MQTT_USER}'",'>> config.json
 echo '  "password": "'${HOCO_MQTT_PASS}'",'>> config.json
 echo '  "prefix": "'${HOCO_MQTT_PREFIX}'"'>> config.json
 echo ' },'>> config.json
-echo ' "homematic": {'>> config.json
-echo '  "rfd_host": "'${HOCO_HOMEMATIC_RFD_HOST}'",'>> config.json
-echo '  "rfd_port": '${HOCO_HOMEMATIC_RFD_PORT}','>> config.json
-echo '  "interface_host": "'${HOCO_HOMEMATIC_INTERFACE_HOST}'",'>> config.json
-echo '  "interface_port": '${HOCO_HOMEMATIC_INTERFACE_PORT}','>> config.json
-echo '  "module_serial": "'${HOCO_HOMEMATIC_RF_SERIAL}'",'>> config.json
-echo '  "module_version": "'${HOCO_HOMEMATIC_RF_VERSION'",'>> config.json
-echo '  "module_address": "'${HOCO_HOMEMATIC_RF_ADDRESS'"'>> config.json
-echo ' },'>> config.json
-echo ' "homematicip": {'>> config.json
-echo '  "rfd_host": "'${HOCO_HOMEMATICIP_RFD_HOST}'",'>> config.json
-echo '  "rfd_port": '${HOCO_HOMEMATICIP_RFD_PORT}','>> config.json
-echo '  "interface_host": "'${HOCO_HOMEMATICIP_INTERFACE_HOST}'",'>> config.json
-echo '  "interface_port": '${HOCO_HOMEMATICIP_INTERFACE_PORT}','>> config.json
-echo '  "module_serial": "'${HOCO_HOMEMATIC_RF_SERIAL}'",'>> config.json
-echo '  "module_version": "'${HOCO_HOMEMATIC_RF_VERSION'",'>> config.json
-echo '  "module_address": "'${HOCO_HOMEMATIC_RF_ADDRESS'"'>> config.json
-echo ' }'>> config.json
+echo ' "adapter": ['>> config.json
+echo '  {'>> config.json
+echo '   "type": "homematic",'>> config.json
+echo '   "module": "homematic",'>> config.json
+echo '   "protocol": "'${HOCO_HOMEMATIC_PROTOCOL}'",'>> config.json
+echo '   "rfd_host": "'${HOCO_HOMEMATIC_RFD_HOST}'",'>> config.json
+echo '   "rfd_port": '${HOCO_HOMEMATIC_RFD_PORT}','>> config.json
+echo '   "interface_host": "'${HOCO_HOMEMATIC_INTERFACE_HOST}'",'>> config.json
+echo '   "interface_port": '${HOCO_HOMEMATIC_INTERFACE_PORT}','>> config.json
+echo '   "module_serial": "'${HOCO_HOMEMATIC_RF_SERIAL}'",'>> config.json
+echo '   "module_version": "'${HOCO_HOMEMATIC_RF_VERSION}'",'>> config.json
+echo '   "module_address": "'${HOCO_HOMEMATIC_RF_ADDRESS}'"'>> config.json
+echo '  },'>> config.json
+echo '  {'>> config.json
+echo '   "type": "homematicip",'>> config.json
+echo '   "module": "homematic",'>> config.json
+echo '   "protocol": "'${HOCO_HOMEMATICIP_PROTOCOL}'",'>> config.json
+echo '   "rfd_host": "'${HOCO_HOMEMATICIP_RFD_HOST}'",'>> config.json
+echo '   "rfd_port": '${HOCO_HOMEMATICIP_RFD_PORT}','>> config.json
+echo '   "interface_host": "'${HOCO_HOMEMATICIP_INTERFACE_HOST}'",'>> config.json
+echo '   "interface_port": '${HOCO_HOMEMATICIP_INTERFACE_PORT}','>> config.json
+echo '   "module_serial": "'${HOCO_HOMEMATIC_RF_SERIAL}'",'>> config.json
+echo '   "module_version": "'${HOCO_HOMEMATIC_RF_VERSION}'",'>> config.json
+echo '   "module_address": "'${HOCO_HOMEMATIC_RF_ADDRESS}'"'>> config.json
+echo '  }'>> config.json
+echo ' ]'>> config.json
 echo '}'>> config.json
-pm2 start ${PWD}/app.js --name "homematic" -- homematic
-pm2 start ${PWD}/app.js --name "homematicip" -- homematic homematicip
+pm2 start ${PWD}/app.js --name "homematic"
 pm2 save

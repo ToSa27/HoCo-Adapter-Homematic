@@ -9,12 +9,11 @@
 # Description:       HomeMaticIP server process
 ### END INIT INFO
 
-PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC="HomeMaticIP server process"
 NAME=hmipserver
-DAEMON=java
-DAEMON_ARGS="-Xmx128m -Dos.arch=arm -Dlog4j.configuration=file://<<HOCO_HOMEMATIC_HOME>>/etc/log4j.xml -Dfile.encoding=ISO-8859-1 -jar <<HOCO_HOMEMATIC_HOME>>/HMServer/HMIPServer.jar <<HOCO_HOMEMATIC_HOME>>/etc/crRFD.conf <<HOCO_HOMEMATIC_HOME>>/etc/hmserver.conf"
-PIDFILE=<<HOCO_HOMEMATIC_HOME>>/var/rfd/$NAME.pid
+DAEMON=/usr/bin/java
+DAEMON_ARGS="-Xmx128m -Dlog4j.configuration=file://<<HOCO_HOMEMATIC_HOME>>/etc/log4j.xml -Dfile.encoding=ISO-8859-1 -jar <<HOCO_HOMEMATIC_HOME>>/HMServer/HMIPServer.jar <<HOCO_HOMEMATIC_HOME>>/etc/crRFD.conf <<HOCO_HOMEMATIC_HOME>>/etc/hmserver.conf"
+PIDFILE=<<HOCO_HOMEMATIC_HOME>>/var/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 USER=hoco
 
@@ -28,11 +27,13 @@ case "$1" in
     log_daemon_msg "Starting $DESC" "$NAME"
     chown root:dialout /dev/ttyS0
     chmod 660 /dev/ttyS0
+    export PATH=/sbin:/usr/sbin:/bin:/usr/bin:<<HOCO_HOMEMATIC_HOME>>/bin
     start-stop-daemon -S -q -m -p $PIDFILE -c $USER --exec $DAEMON -- $DAEMON_ARGS &
     ;;
   stop)
     log_daemon_msg "Stopping $DESC" "$NAME"
     start-stop-daemon -K -q -p $PIDFILE
+    rm -f $PIDFILE
     ;;
   status)
     status_of_proc "$DAEMON" "$NAME" && exit 0 || exit $?
