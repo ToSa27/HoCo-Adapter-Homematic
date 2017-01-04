@@ -114,6 +114,6 @@ echo '  "module_version": "'${HOCO_HOMEMATIC_RF_VERSION'",'>> config.json
 echo '  "module_address": "'${HOCO_HOMEMATIC_RF_ADDRESS'"'>> config.json
 echo ' }'>> config.json
 echo '}'>> config.json
-pm2 start ${PWD}/app.js --name "homematic"
-pm2 start ${PWD}/appip.js --name "homematicip"
+pm2 start ${PWD}/app.js --name "homematic" -- homematic
+pm2 start ${PWD}/app.js --name "homematicip" -- homematic homematicip
 pm2 save

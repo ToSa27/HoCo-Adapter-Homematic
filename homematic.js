@@ -1,6 +1,7 @@
 const EventEmitter = require('events');
 const util = require('util');
 const log = require("./log.js");
+const xmlrpc = require('homematic-xmlrpc');
 const binrpc = require('binrpc');
 
 var _interfaceid;
@@ -16,10 +17,19 @@ function Homematic(config) {
 	_config = config;
 	_interfaceid = _config.module_serial;
 
-	_server = binrpc.createServer({
-		host: _config.interface_host, 
-		port: _config.interface_port
-	});
+	if (_config.protocol == 'binrpc') {
+	        _server = binrpc.createServer({
+        	        host: _config.interface_host,
+                	port: _config.interface_port
+        });
+	} else if (_config.protocol == 'xmlrpc') {
+	        _server = xmlrpc.createServer({
+        	        host: _config.interface_host,
+                	port: _config.interface_port
+        });
+	} else {
+		log.err('unknown protocol: ' + _config.protocol);
+	}
 
 	_server.on('NotFound', function (method, params) {
 		log.warn('homematic server not found');
@@ -70,28 +80,48 @@ function Homematic(config) {
 		callback(null, rpcMethods['system.listMethods'](err, params));
 	});
 
-	_client = binrpc.createClient({
-	        host: _config.rfd_host,
-        	port: _config.rfd_port,
-        	path: '/'
-	});
-	
-	_client.on('connect', function () {
-		var initUrl = 'xmlrpc_bin://' + _config.interface_host + ':' + _config.interface_port;
-		rpcSend('init', [initUrl, _interfaceid], function(err, data) {
-			if (err) {
-				_connected = false;
-				self.emit("disconnected");
-			} else {
-		                _connected = true;
-         			self.emit("connected", _config.module_serial);
-			}
+	if (_config.protocol == 'binrpc') {
+		_client = binrpc.createClient({
+		        host: _config.rfd_host,
+        		port: _config.rfd_port,
+        		path: '/'
 		});
-	});
+	} else {
+                _client = xmlrpc.createClient({
+                        host: _config.rfd_host,
+                        port: _config.rfd_port,
+                        path: '/'
+                });
+	}
 
-	_client.on('error', function (e) {
-		log.err(e);
-	});
+	if (_config.protocol == 'binrpc') {
+		_client.on('connect', function () {
+			var initUrl = 'xmlrpc_bin://' + _config.interface_host + ':' + _config.interface_port;
+			rpcSend('init', [initUrl, _interfaceid], function(err, data) {
+				if (err) {
+					_connected = false;
+					self.emit("disconnected");
+				} else {
+			                _connected = true;
+	         			self.emit("connected", _config.module_serial);
+				}
+			});
+		});
+	        _client.on('error', function (e) {
+	                log.err(e);
+	        });
+	} else {
+                var initUrl = 'http://' + _config.interface_host + ':' + _config.interface_port;
+                rpcSend('init', [initUrl, _interfaceid], function(err, data) {
+                        if (err) {
+                                _connected = false;
+                                self.emit("disconnected");
+                        } else {
+                                _connected = true;
+                                self.emit("connected", _config.module_serial);
+                        }
+                });
+	}
 };
 
 util.inherits(Homematic, EventEmitter)

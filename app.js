@@ -1,15 +1,19 @@
-var config = require("./config.js");
-var log = require("./log.js");
-var Bus = require("./bus.js");
-var Homematic = require("./homematic.js");
+const config = require("./config.js");
+const log = require("./log.js");
+const Bus = require("./bus.js");
 
-var adaptertype = "homematic";
+if (process.argv.length < 3)
+	log.err('missing adapter argument');
+
+const Gw = require("./" + process.argv[2] + ".js");
+
+var adaptertype = process.argv.length > 3 ? process.argv[3] : process.argv[2];
 var adapterid;
 
 var bus;
 var gw;
 
-gw = new Homematic(config[adaptertype]);
+gw = new Gw(config[adaptertype]);
 
 gw.on("connected", function(id) {
         adapterid = id;
