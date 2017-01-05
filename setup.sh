@@ -96,4 +96,4 @@ echo '  }'>> config.json
 echo ' ]'>> config.json
 echo '}'>> config.json
 sudo cp hoco-homematic.service /etc/systemd/system/
-sudo systemctl enable hoco-homemaic.service
+sudo systemctl enable hoco-homematic.service
