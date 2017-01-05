@@ -28,7 +28,7 @@ case "$1" in
     modprobe bcm2835_raw_uart
     chown root:dialout /dev/bcm2835-raw-uart
     chmod 660 /dev/bcm2835-raw-uart
-    RF_SERIAL=$(eq3configcmd update-coprocessor -p /dev/bcm2835-raw-uart -c -se 2>&1 | grep "SerialNumber:" | cut -d' ' -f$
+    RF_SERIAL=$(eq3configcmd update-coprocessor -p /dev/bcm2835-raw-uart -c -se 2>&1 | grep "SerialNumber:" | cut -d' ' -f5)
     echo $RF_SERIAL > /opt/hm/var/rf_serial
     chown hoco:hoco /opt/hm/var/rf_serial
     RF_VERSION=$(eq3configcmd update-coprocessor -p /dev/bcm2835-raw-uart -c -v 2>&1 | grep "Version:" | cut -d' ' -f5)
