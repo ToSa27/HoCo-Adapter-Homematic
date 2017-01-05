@@ -9,12 +9,12 @@
 # Description:       HomeMatic multimacd process
 ### END INIT INFO
 
-PATH=/sbin:/usr/sbin:/bin:/usr/bin:<<HOCO_HOMEMATIC_HOME>>/bin
+PATH=/sbin:/usr/sbin:/bin:/usr/bin:/opt/hm/bin
 DESC="HomeMatic multimacd interface process"
 NAME=multimacd
-DAEMON=<<HOCO_HOMEMATIC_HOME>>/bin/$NAME
-DAEMON_ARGS="-f <<HOCO_HOMEMATIC_HOME>>/etc/multimacd.conf -l 5"
-PIDFILE=<<HOCO_HOMEMATIC_HOME>>/var/rfd/$NAME.pid
+DAEMON=/opt/hm/bin/$NAME
+DAEMON_ARGS="-f /opt/hm/etc/multimacd.conf -l 5"
+PIDFILE=/opt/hm/var/rfd/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
 [ -x "$DAEMON" ] || exit 0
@@ -28,6 +28,15 @@ case "$1" in
     modprobe bcm2835_raw_uart
     chown root:dialout /dev/bcm2835-raw-uart
     chmod 660 /dev/bcm2835-raw-uart
+    RF_SERIAL=$(eq3configcmd update-coprocessor -p /dev/bcm2835-raw-uart -c -se 2>&1 | grep "SerialNumber:" | cut -d' ' -f$
+    echo $RF_SERIAL > /opt/hm/var/rf_serial
+    chown hoco:hoco /opt/hm/var/rf_serial
+    RF_VERSION=$(eq3configcmd update-coprocessor -p /dev/bcm2835-raw-uart -c -v 2>&1 | grep "Version:" | cut -d' ' -f5)
+    echo $RF_SERIAL > /opt/hm/var/rf_version
+    chown hoco:hoco /opt/hm/var/rf_version
+    RF_ADDRESS=$(eq3configcmd read-default-rf-address -f /dev/bcm2835-raw-uart -h 2>&1 | grep "^0x")
+    echo $RF_ADDRESS > /opt/hm/var/rf_address
+    chown hoco:hoco /opt/hm/var/rf_address
     modprobe eq3_char_loop
     chown root:dialout /dev/eq3loop
     chmod 660 /dev/eq3loop

@@ -1,51 +1,43 @@
 #!/bin/bash
 cd "${0%/*}"
 . ${HOCO_HOME}/data/config.sh
-. config.sh
 sudo apt-get install -y raspberrypi-kernel-headers libusb-1.0-0 oracle-java8-jdk
-sudo mkdir $HOCO_HOMEMATIC_HOME
-sudo chown $HOCO_USER:$HOCO_USER $HOCO_HOMEMATIC_HOME
-mkdir $HOCO_HOMEMATIC_HOME/src
-mkdir $HOCO_HOMEMATIC_HOME/etc
-mkdir $HOCO_HOMEMATIC_HOME/etc/config
-mkdir $HOCO_HOMEMATIC_HOME/etc/rfd
-mkdir $HOCO_HOMEMATIC_HOME/var
-mkdir $HOCO_HOMEMATIC_HOME/var/log
-mkdir $HOCO_HOMEMATIC_HOME/var/rfd
-mkdir $HOCO_HOMEMATIC_HOME/var/rfd/devices
-mkdir $HOCO_HOMEMATIC_HOME/var/status
+sudo mkdir /opt/hm
+sudo chown $HOCO_USER:$HOCO_USER /opt/hm
+mkdir /opt/hm/src
+mkdir /opt/hm/etc
+mkdir /opt/hm/etc/config
+mkdir /opt/hm/etc/rfd
+mkdir /opt/hm/var
+mkdir /opt/hm/var/log
+mkdir /opt/hm/var/rfd
+mkdir /opt/hm/var/rfd/devices
+mkdir /opt/hm/var/status
 
-git clone https://github.com/eq-3/occu $HOCO_HOMEMATIC_HOME/src/occu
-git clone https://github.com/jens-maus/RaspberryMatic $HOCO_HOMEMATIC_HOME/src/RaspberryMatic
+git clone https://github.com/eq-3/occu /opt/hm/src/occu
+git clone https://github.com/jens-maus/RaspberryMatic /opt/hm/src/RaspberryMatic
 
-cp -R $HOCO_HOMEMATIC_HOME/src/occu/firmware $HOCO_HOMEMATIC_HOME/
-cp -R $HOCO_HOMEMATIC_HOME/src/occu/arm-gnueabihf/packages-eQ-3/RFD/lib $HOCO_HOMEMATIC_HOME/
-cp -R $HOCO_HOMEMATIC_HOME/src/occu/arm-gnueabihf/packages-eQ-3/RFD/bin $HOCO_HOMEMATIC_HOME/
-cp -R $HOCO_HOMEMATIC_HOME/src/occu/HMserver/opt/HMServer $HOCO_HOMEMATIC_HOME/
-cp $HOCO_HOMEMATIC_HOME/src/occu/arm-gnueabihf/packages-eQ-3/LinuxBasis/bin/eq3configcmd $HOCO_HOMEMATIC_HOME/bin/
-cp $HOCO_HOMEMATIC_HOME/src/occu/arm-gnueabihf/packages-eQ-3/LinuxBasis/lib/libeq3config.so $HOCO_HOMEMATIC_HOME/lib/
-cp $HOCO_HOMEMATIC_HOME/src/occu/arm-gnueabihf/packages-eQ-3/RFD/etc/config_templates/hmip_networkkey.conf $HOCO_HOMEMATIC_HOME/etc/
+cp -R /opt/hm/src/occu/firmware /opt/hm/
+cp -R /opt/hm/src/occu/arm-gnueabihf/packages-eQ-3/RFD/lib /opt/hm/
+cp -R /opt/hm/src/occu/arm-gnueabihf/packages-eQ-3/RFD/bin /opt/hm/
+cp -R /opt/hm/src/occu/HMserver/opt/HMServer /opt/hm/
+cp /opt/hm/src/occu/arm-gnueabihf/packages-eQ-3/LinuxBasis/bin/eq3configcmd /opt/hm/bin/
+cp /opt/hm/src/occu/arm-gnueabihf/packages-eQ-3/LinuxBasis/lib/libeq3config.so /opt/hm/lib/
+cp /opt/hm/src/occu/arm-gnueabihf/packages-eQ-3/RFD/etc/config_templates/hmip_networkkey.conf /opt/hm/etc/
 
 SETUP_PWD=$PWD
-cp -R $HOCO_HOMEMATIC_HOME/src/RaspberryMatic/buildroot-external/package/homematic/kernel-modules/bcm2835_raw_uart $HOCO_HOMEMATIC_HOME/src/
-cd $HOCO_HOMEMATIC_HOME/src/bcm2835_raw_uart
+cp -R /opt/hm/src/RaspberryMatic/buildroot-external/package/homematic/kernel-modules/bcm2835_raw_uart /opt/hm/src/
+cd /opt/hm/src/bcm2835_raw_uart
 make
-sudo make -C /lib/modules/`uname -r`/build M=$HOCO_HOMEMATIC_HOME/src/bcm2835_raw_uart modules_install
-cp -R $HOCO_HOMEMATIC_HOME/src/RaspberryMatic/buildroot-external/package/homematic/kernel-modules/eq3_char_loop $HOCO_HOMEMATIC_HOME/src/
-cd $HOCO_HOMEMATIC_HOME/src/eq3_char_loop
+sudo make -C /lib/modules/`uname -r`/build M=/opt/hm/src/bcm2835_raw_uart modules_install
+cp -R /opt/hm/src/RaspberryMatic/buildroot-external/package/homematic/kernel-modules/eq3_char_loop /opt/hm/src/
+cd /opt/hm/src/eq3_char_loop
 make
-sudo make -C /lib/modules/`uname -r`/build M=$HOCO_HOMEMATIC_HOME/src/eq3_char_loop modules_install
+sudo make -C /lib/modules/`uname -r`/build M=/opt/hm/src/eq3_char_loop modules_install
 sudo depmod
 cd $SETUP_PWD
 
-sudo modprobe bcm2835_raw_uart
-sudo chown root:dialout /dev/bcm2835-raw-uart
-sudo chmod 660 /dev/bcm2835-raw-uart
-HOCO_HOMEMATIC_RF_SERIAL=$(eq3configcmd update-coprocessor -p /dev/bcm2835-raw-uart -c -se 2>&1 | grep "SerialNumber:" | cut -d' ' -f5)
-HOCO_HOMEMATIC_RF_VERSION=$(eq3configcmd update-coprocessor -p /dev/bcm2835-raw-uart -c -v 2>&1 | grep "Version:" | cut -d' ' -f5)
-HOCO_HOMEMATIC_RF_ADDRESS=$(eq3configcmd read-default-rf-address -f /dev/bcm2835-raw-uart -h 2>&1 | grep "^0x")
-
-sudo su -c "echo 'PATH=\$PATH:'$HOCO_HOMEMATIC_HOME'/bin' > /etc/profile.d/homematic.sh"
+sudo su -c "echo 'PATH=\$PATH:/opt/hm/bin' > /etc/profile.d/homematic.sh"
 sudo su -c "echo 'export PATH' >> /etc/profile.d/homematic.sh"
 sudo chmod a+x /etc/profile.d/homematic.sh
 
@@ -54,38 +46,25 @@ sudo sed -i 's/enable_uart=0/enable_uart=1/g' /boot/config.txt
 sudo su -c "echo 'dtoverlay=pi3-disable-bt' >> /boot/config.txt"
 sudo su -c "echo 'dtparam=uart1=off' >> /boot/config.txt"
 
-sudo su -c "echo ''$HOCO_HOMEMATIC_HOME'/lib/' > /etc/ld.so.conf.d/homematic.conf"
+sudo su -c "echo '/opt/hm/lib/' > /etc/ld.so.conf.d/homematic.conf"
 sudo ldconfig
 
-cp multimacd.conf $HOCO_HOMEMATIC_HOME/etc/
-sed -i "s|<<HOCO_HOMEMATIC_HOME>>|$HOCO_HOMEMATIC_HOME|g" $HOCO_HOMEMATIC_HOME/etc/multimacd.conf
-cp rfd.conf $HOCO_HOMEMATIC_HOME/etc/
-sed -i "s|<<HOCO_HOMEMATIC_RFD_PORT>>|$HOCO_HOMEMATIC_RFD_PORT|g" $HOCO_HOMEMATIC_HOME/etc/rfd.conf
-sed -i "s|<<HOCO_HOMEMATIC_HOME>>|$HOCO_HOMEMATIC_HOME|g" $HOCO_HOMEMATIC_HOME/etc/rfd.conf
-cp crRFD.conf $HOCO_HOMEMATIC_HOME/etc/
-sed -i "s|<<HOCO_HOMEMATIC_HOME>>|$HOCO_HOMEMATIC_HOME|g" $HOCO_HOMEMATIC_HOME/etc/crRFD.conf
-cp log4j.xml $HOCO_HOMEMATIC_HOME/etc/
-sed -i "s|<<HOCO_HOMEMATIC_HOME>>|$HOCO_HOMEMATIC_HOME|g" $HOCO_HOMEMATIC_HOME/etc/log4j.xml
-cp hmserver.conf $HOCO_HOMEMATIC_HOME/etc/
-sed -i "s|<<HOCO_HOMEMATIC_HOME>>|$HOCO_HOMEMATIC_HOME|g" $HOCO_HOMEMATIC_HOME/etc/hmserver.conf
+cp multimacd.conf /opt/hm/etc/
+cp rfd.conf /opt/hm/etc/
+cp crRFD.conf /opt/hm/etc/
+cp log4j.xml /opt/hm/etc/
+cp hmserver.conf /opt/hm/etc/
 sudo cp multimacd.init /etc/init.d/multimacd
-sudo sed -i "s|<<HOCO_HOMEMATIC_HOME>>|$HOCO_HOMEMATIC_HOME|g" /etc/init.d/multimacd
 sudo chmod a+x /etc/init.d/multimacd
 sudo update-rc.d multimacd defaults
 sudo cp rfd.init /etc/init.d/rfd
-sudo sed -i "s|<<HOCO_HOMEMATIC_HOME>>|$HOCO_HOMEMATIC_HOME|g" /etc/init.d/rfd
 sudo chmod a+x /etc/init.d/rfd
 sudo update-rc.d rfd defaults
 sudo cp hmipserver.init /etc/init.d/hmipserver
-sudo sed -i "s|<<HOCO_HOMEMATIC_HOME>>|$HOCO_HOMEMATIC_HOME|g" /etc/init.d/hmipserver
 sudo chmod a+x /etc/init.d/hmipserver
 sudo update-rc.d hmipserver defaults
 
 sudo systemctl daemon-reload
-
-sudo systemctl start multimacd
-sudo systemctl start rfd
-sudo systemctl start hmipserver
 
 npm install
 echo '{' > config.json
@@ -99,28 +78,22 @@ echo ' "adapter": ['>> config.json
 echo '  {'>> config.json
 echo '   "type": "homematic",'>> config.json
 echo '   "module": "homematic",'>> config.json
-echo '   "protocol": "'${HOCO_HOMEMATIC_PROTOCOL}'",'>> config.json
-echo '   "rfd_host": "'${HOCO_HOMEMATIC_RFD_HOST}'",'>> config.json
-echo '   "rfd_port": '${HOCO_HOMEMATIC_RFD_PORT}','>> config.json
-echo '   "interface_host": "'${HOCO_HOMEMATIC_INTERFACE_HOST}'",'>> config.json
-echo '   "interface_port": '${HOCO_HOMEMATIC_INTERFACE_PORT}','>> config.json
-echo '   "module_serial": "'${HOCO_HOMEMATIC_RF_SERIAL}'",'>> config.json
-echo '   "module_version": "'${HOCO_HOMEMATIC_RF_VERSION}'",'>> config.json
-echo '   "module_address": "'${HOCO_HOMEMATIC_RF_ADDRESS}'"'>> config.json
+echo '   "protocol": "binrpc",'>> config.json
+echo '   "rfd_host": "127.0.0.1",'>> config.json
+echo '   "rfd_port": 2001,'>> config.json
+echo '   "interface_host": "127.0.0.1",'>> config.json
+echo '   "interface_port": 2016'>> config.json
 echo '  },'>> config.json
 echo '  {'>> config.json
 echo '   "type": "homematicip",'>> config.json
 echo '   "module": "homematic",'>> config.json
-echo '   "protocol": "'${HOCO_HOMEMATICIP_PROTOCOL}'",'>> config.json
-echo '   "rfd_host": "'${HOCO_HOMEMATICIP_RFD_HOST}'",'>> config.json
-echo '   "rfd_port": '${HOCO_HOMEMATICIP_RFD_PORT}','>> config.json
-echo '   "interface_host": "'${HOCO_HOMEMATICIP_INTERFACE_HOST}'",'>> config.json
-echo '   "interface_port": '${HOCO_HOMEMATICIP_INTERFACE_PORT}','>> config.json
-echo '   "module_serial": "'${HOCO_HOMEMATIC_RF_SERIAL}'",'>> config.json
-echo '   "module_version": "'${HOCO_HOMEMATIC_RF_VERSION}'",'>> config.json
-echo '   "module_address": "'${HOCO_HOMEMATIC_RF_ADDRESS}'"'>> config.json
+echo '   "protocol": "xmlrpc",'>> config.json
+echo '   "rfd_host": "127.0.0.1",'>> config.json
+echo '   "rfd_port": 2010,'>> config.json
+echo '   "interface_host": "127.0.0.1",'>> config.json
+echo '   "interface_port": 2015'>> config.json
 echo '  }'>> config.json
 echo ' ]'>> config.json
 echo '}'>> config.json
-pm2 start ${PWD}/app.js --name "homematic"
-pm2 save
+sudo cp hoco-homematic.service /etc/systemd/system/
+sudo systemctl enable hoco-homemaic.service

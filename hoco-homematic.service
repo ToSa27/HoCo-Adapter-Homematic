@@ -1,0 +1,16 @@
+[Unit]
+Description=HoCo Adapter Homematic
+After=network.target multimacd rfd hmipserver
+
+[Service]
+WorkingDirectory=/opt/hoco/adapter/homematic
+ExecStart=/usr/bin/node app.js
+Restart=always
+StandardOutput=syslog
+SyslogIdentifier=hoco-homematic
+User=hoco
+Group=hoco
+Environment=PATH=/usr/bin:/usr/local/bin
+
+[Install]
+WantedBy=multi-user.target

@@ -1,5 +1,6 @@
 const EventEmitter = require('events');
 const util = require('util');
+const fs = require("fs");
 const log = require("./log.js");
 const xmlrpc = require('homematic-xmlrpc');
 const binrpc = require('binrpc');
@@ -9,7 +10,7 @@ function Homematic(config) {
 	EventEmitter.call(this);
 	var self = this;
 	this.config = config;
-	this.id = this.config.module_serial;
+	this.id = fs.readFileSync("/opt/hm/var/rf_serial", "utf-8");
 	this.connected = false;
 
 	if (this.config.protocol == 'binrpc') {

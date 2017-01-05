@@ -9,12 +9,12 @@
 # Description:       HomeMatic BidCoS-RF interface process
 ### END INIT INFO
 
-PATH=/sbin:/usr/sbin:/bin:/usr/bin:<<HOCO_HOMEMATIC_HOME>>/bin
+PATH=/sbin:/usr/sbin:/bin:/usr/bin:/opt/hm/bin
 DESC="HomeMatic BidCoS-RF interface process"
 NAME=rfd
-DAEMON=<<HOCO_HOMEMATIC_HOME>>/bin/$NAME
-DAEMON_ARGS="-f <<HOCO_HOMEMATIC_HOME>>/etc/rfd.conf -d"
-PIDFILE=<<HOCO_HOMEMATIC_HOME>>/var/rfd/$NAME.pid
+DAEMON=/opt/hm/bin/$NAME
+DAEMON_ARGS="-f /opt/hm/etc/rfd.conf -d"
+PIDFILE=/opt/hm/var/rfd/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 USER=hoco
 
