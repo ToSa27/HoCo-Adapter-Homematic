@@ -66,6 +66,7 @@ sudo update-rc.d hmipserver defaults
 
 sudo systemctl daemon-reload
 
+cd ..
 npm install
 echo '{' > config.json
 echo ' "mqtt": {'>> config.json
@@ -95,5 +96,5 @@ echo '   "interface_port": 2015'>> config.json
 echo '  }'>> config.json
 echo ' ]'>> config.json
 echo '}'>> config.json
-sudo cp hoco-homematic.service /etc/systemd/system/
+sudo cp setup/hoco-homematic.service /etc/systemd/system/
 sudo systemctl enable hoco-homematic.service
