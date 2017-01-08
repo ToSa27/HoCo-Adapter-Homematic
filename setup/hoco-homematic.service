@@ -4,7 +4,7 @@ After=network.target multimacd rfd hmipserver
 
 [Service]
 WorkingDirectory=/opt/hoco/adapter/homematic
-ExecStart=/usr/bin/node app.js
+ExecStart=/usr/bin/node ../common/app.js
 Restart=always
 StandardOutput=syslog
 SyslogIdentifier=hoco-homematic
