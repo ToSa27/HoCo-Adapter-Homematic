@@ -1,7 +1,7 @@
 const EventEmitter = require('events');
 const util = require('util');
 const fs = require("fs");
-const log = require("./log.js");
+const log = require("../common/log.js");
 const xmlrpc = require('homematic-xmlrpc');
 const binrpc = require('binrpc');
 
@@ -93,15 +93,13 @@ function Homematic(config) {
 	if (this.config.protocol == 'binrpc') {
 		this.client.on('connect', function () {
 			var initUrl = 'xmlrpc_bin://' + self.config.interface_host + ':' + self.config.interface_port;
-log.info("bin url: " + initUrl);
-log.info("bin config: " + JSON.stringify(this.config));
 			rpcSend(self.client, 'init', [initUrl, self.id], function(err, data) {
 				if (err) {
 					self.connected = false;
-					self.emit("disconnected");
+					self.emit("disconnected", self);
 				} else {
 			                self.connected = true;
-	         			self.emit("connected", this.id);
+	         			self.emit("connected", self, self.id);
 				}
 			});
 		});
@@ -110,15 +108,13 @@ log.info("bin config: " + JSON.stringify(this.config));
 	        });
 	} else {
                 var initUrl = 'http://' + self.config.interface_host + ':' + self.config.interface_port;
-log.info("xml url: " + initUrl);
-log.info("xml config: " + JSON.stringify(this.config));
                 rpcSend(self.client, 'init', [initUrl, self.id], function(err, data) {
                         if (err) {
                                 self.connected = false;
-                                self.emit("disconnected");
+                                self.emit("disconnected", self);
                         } else {
                                 self.connected = true;
-                                self.emit("connected", this.id);
+                                self.emit("connected", self, self.id);
                         }
                 });
 	}
@@ -202,11 +198,9 @@ var rpcMethods = {
         }
 };
 
-/*
 Homematic.prototype.connected = function() {
         return this.connected;
 };
-*/
 
 Homematic.prototype.adapter = function(command, message) {
 	log.info('homematic adapter: ' + command + ': ' + message);
