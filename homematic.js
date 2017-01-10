@@ -6,11 +6,11 @@ const xmlrpc = require('homematic-xmlrpc');
 const binrpc = require('binrpc');
 
 function Homematic(config) {
-	log.info("homematic config: " + JSON.stringify(config));
+	log.debug("homematic config: " + JSON.stringify(config));
 	EventEmitter.call(this);
 	var self = this;
 	this.config = config;
-	this.id = fs.readFileSync("/opt/hm/var/rf_serial", "utf-8");
+	this.id = fs.readFileSync("/opt/hm/var/rf_serial", "utf-8").trim();
 	this.connected = false;
 
 	if (this.config.protocol == 'binrpc') {
@@ -28,17 +28,17 @@ function Homematic(config) {
 	}
 
 	this.server.on('NotFound', function (method, params) {
-		log.warn('homematic server not found');
+		log.err('homematic server not found');
 	});
 
 	this.server.on('system.multicall', function (method, params, callback) {
-		log.info('homematic server system multicall: ' + method + JSON.stringify(params));
+		log.debug('homematic server system multicall: ' + method + JSON.stringify(params));
 		var response = [];
 		for (var i = 0; i < params[0].length; i++) {
-			if (rpcMethods[params[0][i].methodName]) {
-				response.push(rpcMethods[params[0][i].methodName](null, params[0][i].params));
+			if (self.rpcMethods[params[0][i].methodName]) {
+				response.push(self.rpcMethods[params[0][i].methodName](null, params[0][i].params));
 			} else {
-				log.warn('RPC <- undefined method ' + method + ' ' + JSON.stringify(params).slice(0,80));
+				log.err('RPC <- undefined method ' + method + ' ' + JSON.stringify(params).slice(0,80));
 				response.push('');
 			}
 		}
@@ -46,35 +46,77 @@ function Homematic(config) {
 	});
 
 	this.server.on('event', function (err, params, callback) {
-		log.info('homematic server event');
-		lastEvent = (new Date()).getTime();
-		callback(null, rpcMethods.event(err, params));
+		log.debug('homematic server event');
+		callback(null, self.rpcMethods.event(err, params));
 	});
 
 	this.server.on('newDevices', function (err, params, callback) {
-                log.info('homematic server new device');
-		callback(null, rpcMethods.newDevices(err, params));
+                log.debug('homematic server new device');
+		callback(null, self.rpcMethods.newDevices(err, params));
 	});
 
 	this.server.on('deleteDevices', function(err, params, callback) {
-                log.info('homematic server delete device');
-		callback(null, rpcMethods.deleteDevices(err, params));
+                log.debug('homematic server delete device');
+		callback(null, self.rpcMethods.deleteDevices(err, params));
 	});
 
 	this.server.on('replaceDevice', function(err, params, callback) {
-                log.info('homematic server replace device');
-		callback(null, rpcMethods.replaceDevice(err, params));
+                log.debug('homematic server replace device');
+		callback(null, self.rpcMethods.replaceDevice(err, params));
 	});
 
 	this.server.on('listDevices', function(err, params, callback) {
-                log.info('homematic server list devices');
-		callback(null, rpcMethods.listDevices(err, params));
+                log.debug('homematic server list devices');
+		callback(null, self.rpcMethods.listDevices(err, params));
 	});
 
 	this.server.on('system.listMethods', function(err, params, callback) {
-                log.info('homematic server system list methods');
-		callback(null, rpcMethods['system.listMethods'](err, params));
+                log.debug('homematic server system list methods');
+		callback(null, self.rpcMethods['system.listMethods'](err, params));
 	});
+
+	this.rpcMethods = {
+		event: function (err, params) {
+			log.debug('RPC <- event ' + JSON.stringify(params));
+			self.emit("parameter value", self, params[1], params[2], params[3], params);
+			return '';
+		},
+		newDevices: function (err, params) {
+			log.debug('RPC <- newDevices ' + JSON.stringify(params));
+			var interface_id = params[0];
+			var dev_descriptions = params[1];
+			for (var i = 0; i < dev_descriptions.length; i++) {
+				log.debug('i: ' + i);
+				var dev = dev_descriptions[i];
+				log.debug('dev: ' + JSON.stringify(dev));
+				log.debug('dev ADDRESS: ' + dev.ADDRESS);
+				log.debug('self id: ' + self.id);
+				self.emit("node added", self, dev.ADDRESS, dev);
+			}
+			return '';
+		},
+		deleteDevices: function (err, params) {
+			log.debug('RPC <- deleteDevices ' + JSON.stringify(params));
+			for (var i = 0; i < params[1].length; i++) {
+				var nodeid = params[1][i];
+				self.emit("node removed", self, nodeid);
+			}
+			return '';
+		},
+		replaceDevice: function (err, params) {
+			log.debug('RPC <- replaceDevice ' + JSON.stringify(params));
+			return '';
+		},
+		listDevices: function (err, params) {
+			log.debug('RPC <- listDevices ' + JSON.stringify(params));
+			var res = [];
+			log.debug('RPC -> listDevices response length ' + res.length);
+			return res;
+		},
+		'system.listMethods': function (err, params) {
+			return ['system.multicall', 'system.listMethods', 'listDevices', 'deleteDevices', 'newDevices', 'event'];
+		}
+	};
 
 	if (this.config.protocol == 'binrpc') {
 		this.client = binrpc.createClient({
@@ -93,7 +135,7 @@ function Homematic(config) {
 	if (this.config.protocol == 'binrpc') {
 		this.client.on('connect', function () {
 			var initUrl = 'xmlrpc_bin://' + self.config.interface_host + ':' + self.config.interface_port;
-			rpcSend(self.client, 'init', [initUrl, self.id], function(err, data) {
+			self.rpcSend('init', [initUrl, self.id], function(err, data) {
 				if (err) {
 					self.connected = false;
 					self.emit("disconnected", self);
@@ -108,7 +150,7 @@ function Homematic(config) {
 	        });
 	} else {
                 var initUrl = 'http://' + self.config.interface_host + ':' + self.config.interface_port;
-                rpcSend(self.client, 'init', [initUrl, self.id], function(err, data) {
+                self.rpcSend('init', [initUrl, self.id], function(err, data) {
                         if (err) {
                                 self.connected = false;
                                 self.emit("disconnected", self);
@@ -122,80 +164,23 @@ function Homematic(config) {
 
 util.inherits(Homematic, EventEmitter)
 
-function rpcSend(client, fn, args, cb) {
-        var msg = 'RPC -> ' + fn + '(';
-        for (var i = 0; i < args.length; i++) {
-                if (i > 0)
-                        msg += ',';
-                msg += args[i].toString();
-        }
-        msg += ')';
-        log.info(msg);
-	client.methodCall(fn, args, function(err, data) {
-                if (err)
-                        log.err('    <- ' + fn + ' error ' + JSON.stringify(err));
-                else
-                        log.info('    <- ' + fn + ' response ' + JSON.stringify(data));
-                if (cb)
-                        cb(err, data);
-        });
-}
-
-var rpcMethods = {
-        event: function (err, params) {
-                log.info('RPC <- event ' + JSON.stringify(params));
-//                mqttAnnounceValue(params);
-                return '';
-        },
-        newDevices: function (err, params) {
-                log.info('RPC <- newDevices ' + JSON.stringify(params).slice(0, 80));
-                lastEvent = (new Date()).getTime();
-//                if (!localDevices) localDevices = {};
-                for (var i = 0; i < params[1].length; i++) {
-                        var dev = params[1][i];
-//                        localDevices[dev.ADDRESS] = dev;
-//                        mqttAnnounceNode(dev.ADDRESS);
-                }
-//              saveJson(config.devicesFile, localDevices);
-                return '';
-        },
-        deleteDevices: function (err, params) {
-                log.info('RPC <- deleteDevices ' + JSON.stringify(params));
-//                mqtt.publish(config.mqtt.prefix + '/homematic/' + homematic_homeid + '/' + 'deleteDevices', JSON.stringify(params));
-                lastEvent = (new Date()).getTime();
-//                if (!localDevices || !params[1]) return;
-                for (var i = 0; i < params[1].length; i++) {
-                        var address = params[1][i];
-//                        delete localDevices[address];
-                }
-//              saveJson(config.devicesFile, localDevices);
-                return '';
-        },
-        replaceDevice: function (err, params) {
-                log.info('RPC <- replaceDevice ' + JSON.stringify(params));
-//                mqtt.publish(config.mqtt.prefix + '/homematic/' + homematic_homeid + '/' + 'replaceDevices', JSON.stringify(params));
-                lastEvent = (new Date()).getTime();
-//                if (!localDevices || !params[1]) return;
-//                localNames[params[2]] = localNames[params[1]];
-//                delete localNames[params[1]];
-//                saveJson(config.namesFile, localNames);
-//                delete localDevices[params[1]];
-//              saveJson(config.devicesFile, localDevices);
-                return '';
-        },
-        listDevices: function (err, params) {
-                log.info('RPC <- listDevices ' + JSON.stringify(params));
-//                mqtt.publish(config.mqtt.prefix + '/homematic/' + homematic_homeid + '/' + 'listDevices', JSON.stringify(params));
-                var res = [];
-//                for (var address in localDevices) {
-//                        res.push({ADDRESS: address, VERSION: localDevices[address].VERSION});
-//                }
-                log.info('RPC -> listDevices response length ' + res.length);
-                return res;
-        },
-        'system.listMethods': function (err, params) {
-                return ['system.multicall', 'system.listMethods', 'listDevices', 'deleteDevices', 'newDevices', 'event'];
-        }
+Homematic.prototype.rpcSend = function(fn, args, cb) {
+	var msg = 'RPC -> ' + fn + '(';
+	for (var i = 0; i < args.length; i++) {
+		if (i > 0)
+			msg += ',';
+		msg += args[i].toString();
+	}
+	msg += ')';
+	log.debug(msg);
+	this.client.methodCall(fn, args, function(err, data) {
+	if (err)
+		log.err('    <- ' + fn + ' error ' + JSON.stringify(err));
+	else
+		log.debug('    <- ' + fn + ' response ' + JSON.stringify(data));
+	if (cb)
+		cb(err, data);
+	});
 };
 
 Homematic.prototype.connected = function() {
@@ -203,10 +188,13 @@ Homematic.prototype.connected = function() {
 };
 
 Homematic.prototype.adapter = function(command, message) {
-	log.info('homematic adapter: ' + command + ': ' + message);
+	log.debug('homematic adapter: ' + command + ': ' + message);
         switch (command) {
-                case "learn":
-                        rpcSend(this.client, 'setInstallMode', [true, 30], function(err, data) {});
+                case "scan":
+                        this.rpcSend('setInstallMode', [true, 30], function(err, data) {});
+                        break;
+                case "discover":
+                        this.rpcSend('listDevices', [], function(err, data) {});
                         break;
         }
 };
@@ -215,6 +203,11 @@ Homematic.prototype.node = function(nodeid, command, message) {
 }
 
 Homematic.prototype.parameter = function(nodeid, parameterid, command, message) {
+        switch (command) {
+                case "set":
+                        this.rpcSend('setValue', [nodeid, parameterid, message.val], function(err, data) {});
+                        break;
+        }
 }
 
 module.exports = Homematic;
