@@ -1,5 +1,3 @@
-hallo test
-
 const EventEmitter = require('events');
 const util = require('util');
 const fs = require("fs");
