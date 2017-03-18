@@ -86,11 +86,7 @@ function Homematic(config) {
 			var interface_id = params[0];
 			var dev_descriptions = params[1];
 			for (var i = 0; i < dev_descriptions.length; i++) {
-				log.debug('i: ' + i);
 				var dev = dev_descriptions[i];
-				log.debug('dev: ' + JSON.stringify(dev));
-				log.debug('dev ADDRESS: ' + dev.ADDRESS);
-				log.debug('self id: ' + self.id);
 				self.emit("node added", self, dev.ADDRESS, dev);
 			}
 			return '';
@@ -164,14 +160,51 @@ function Homematic(config) {
 
 util.inherits(Homematic, EventEmitter)
 
+convertHmIPKeyBase32ToBase16 = function(valueString) {
+
+  var HMIP_KEY_CHARS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A',
+    'B', 'C', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'U', 'W', 'X', 'Y', 'Z' ];
+
+  var buffer = new ArrayBuffer(16),
+    keyValue = new Uint8Array(buffer),
+    value = 0,
+    counter = valueString.length - 1 ,
+    bits = 0,
+    byteCounter = keyValue.length - 1,
+    keyString = "";
+
+  while (counter >= 0) {
+    for(var i= 0; i < HMIP_KEY_CHARS.length; i++) {
+      if(HMIP_KEY_CHARS[i] == valueString.charAt(counter)) {
+        value |= i << bits;
+        //console.log(value +" - break");
+        break;
+      }
+    }
+
+    bits += 5;
+    counter--;
+    while (bits > 8 && byteCounter >= 0) {
+      keyValue[byteCounter] = value & 0xff;
+      value >>= 8;
+      bits -= 8;
+      byteCounter--;
+    }
+  }
+
+  for(var i = 0; i < keyValue.length; i++)
+  {
+    if (keyValue[i] < 16) {
+     keyString += "0";
+    }
+    keyString += keyValue[i].toString(16);
+  }
+
+  return keyString.toUpperCase();
+};
+
 Homematic.prototype.rpcSend = function(fn, args, cb) {
-	var msg = 'RPC -> ' + fn + '(';
-	for (var i = 0; i < args.length; i++) {
-		if (i > 0)
-			msg += ',';
-		msg += args[i].toString();
-	}
-	msg += ')';
+	var msg = 'RPC -> ' + fn + '(' + JSON.stringify(args) + ')';
 	log.debug(msg);
 	this.client.methodCall(fn, args, function(err, data) {
 	if (err)
@@ -191,15 +224,40 @@ Homematic.prototype.adapter = function(command, message) {
 	log.debug('homematic adapter: ' + command + ': ' + message);
         switch (command) {
                 case "scan":
-                        this.rpcSend('setInstallMode', [true, 30], function(err, data) {});
+			log.info("msg: " + JSON.stringify(message));
+			var msg = message;
+			if (!msg.KEY || !msg.SGTIN)
+	                        this.rpcSend('setInstallMode', [true, 30], function(err, data) {});
+			else
+				this.rpcSend('setInstallModeWithWhitelist', [true, 30, [ { ADDRESS: msg.SGTIN.replace(/-/g,"").toUpperCase(), KEY_MODE: "LOCAL", KEY: convertHmIPKeyBase32ToBase16(msg.KEY.replace(/-/g,"").toUpperCase()) } ]]);
                         break;
-                case "discover":
+                case "nodes":
                         this.rpcSend('listDevices', [], function(err, data) {});
                         break;
         }
 };
 
 Homematic.prototype.node = function(nodeid, command, message) {
+	var self = this;
+        switch (command) {
+		case "details":
+			this.rpcSend('getDeviceDescription', [nodeid], function(err, data) {
+				self.emit("node details", self, nodeid, data);
+			});
+			break;
+                case "parameters":
+			this.rpcSend('getDeviceDescription', [nodeid], function(err, data) {
+				if (err)
+					return;
+				for (var i = 0; i < data.PARAMSETS.length; i++)
+					self.rpcSend('getParamsetDescription', [nodeid, data.PARAMSETS[i]], function(err, data) {
+						if (err)
+							return;
+						self.emit("node parameters", self, nodeid, data);
+					});
+			});
+                        break;
+        }
 }
 
 Homematic.prototype.parameter = function(nodeid, parameterid, command, message) {
