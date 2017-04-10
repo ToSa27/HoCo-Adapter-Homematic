@@ -15,7 +15,6 @@ mkdir /opt/hm/var/rfd/devices
 mkdir /opt/hm/var/status
 
 git clone https://github.com/eq-3/occu /opt/hm/src/occu
-git clone https://github.com/jens-maus/RaspberryMatic /opt/hm/src/RaspberryMatic
 
 cp -R /opt/hm/src/occu/firmware /opt/hm/
 cp -R /opt/hm/src/occu/arm-gnueabihf/packages-eQ-3/RFD/lib /opt/hm/
@@ -25,13 +24,22 @@ cp /opt/hm/src/occu/arm-gnueabihf/packages-eQ-3/LinuxBasis/bin/eq3configcmd /opt
 cp /opt/hm/src/occu/arm-gnueabihf/packages-eQ-3/LinuxBasis/lib/libeq3config.so /opt/hm/lib/
 cp /opt/hm/src/occu/arm-gnueabihf/packages-eQ-3/RFD/etc/config_templates/hmip_networkkey.conf /opt/hm/etc/
 
+sed -i 's/\t/ /g' /opt/hm/firmware/HM-MOD-UART/fwmap
+sed -i 's/  */ /g' /opt/hm/firmware/HM-MOD-UART/fwmap
+sed -i 's/CCU2 copro/#CCU2 copro/g' /opt/hm/firmware/HM-MOD-UART/fwmap
+sed -i 's/#CCU2 dualcopro/CCU2 dualcopro/g' /opt/hm/firmware/HM-MOD-UART/fwmap
+
 SETUP_PWD=$PWD
-cp -R /opt/hm/src/RaspberryMatic/buildroot-external/package/homematic/kernel-modules/bcm2835_raw_uart /opt/hm/src/
+mkdir /opt/hm/src/bcm2835_raw_uart
 cd /opt/hm/src/bcm2835_raw_uart
+wget https://raw.githubusercontent.com/jens-maus/RaspberryMatic/master/buildroot-external/package/homematic/kernel-modules/bcm2835_raw_uart/bcm2835_raw_uart.c
+wget https://raw.githubusercontent.com/jens-maus/RaspberryMatic/master/buildroot-external/package/homematic/kernel-modules/bcm2835_raw_uart/Makefile
 make
 sudo make -C /lib/modules/`uname -r`/build M=/opt/hm/src/bcm2835_raw_uart modules_install
-cp -R /opt/hm/src/RaspberryMatic/buildroot-external/package/homematic/kernel-modules/eq3_char_loop /opt/hm/src/
+mkdir /opt/hm/src/eq3_char_loop
 cd /opt/hm/src/eq3_char_loop
+wget https://raw.githubusercontent.com/jens-maus/RaspberryMatic/master/buildroot-external/package/homematic/kernel-modules/eq3_char_loop/eq3_char_loop.c
+wget https://raw.githubusercontent.com/jens-maus/RaspberryMatic/master/buildroot-external/package/homematic/kernel-modules/eq3_char_loop/Makefile
 make
 sudo make -C /lib/modules/`uname -r`/build M=/opt/hm/src/eq3_char_loop modules_install
 sudo depmod

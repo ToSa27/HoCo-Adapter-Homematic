@@ -1,9 +1,14 @@
 const EventEmitter = require('events');
 const util = require('util');
-const fs = require("fs");
+const fs = require("fs-extra");
+const path = require('path');
 const log = require("../common/log.js");
 const xmlrpc = require('homematic-xmlrpc');
 const binrpc = require('binrpc');
+const http = require('http');
+const tmp = require('tmp');
+const targz = require('targz');
+const readline = require('readline');
 
 function Homematic(config) {
 	log.debug("homematic config: " + JSON.stringify(config));
@@ -221,10 +226,15 @@ Homematic.prototype.connected = function() {
 };
 
 Homematic.prototype.adapter = function(command, message) {
-	log.debug('homematic adapter: ' + command + ': ' + message);
+        var self = this;
+	log.debug('homematic adapter: ' + command + ': ' + JSON.stringify(message));
         switch (command) {
+		case "details":
+			this.rpcSend('listBidcosInterfaces', [], function(err, data) {
+				self.emit("adapter details", self, data);
+			});
+			break;
                 case "scan":
-			log.info("msg: " + JSON.stringify(message));
 			var msg = message;
 			if (!msg.KEY || !msg.SGTIN)
 	                        this.rpcSend('setInstallMode', [true, 30], function(err, data) {});
@@ -234,6 +244,54 @@ Homematic.prototype.adapter = function(command, message) {
                 case "nodes":
                         this.rpcSend('listDevices', [], function(err, data) {});
                         break;
+                case "firmware":
+		        var self = this;
+			var msg = message;
+			if (msg.URL) {
+                                tmp.dir(function _tempDirCreated(err, tmppath, cleanupCallback) {
+                                        if (!err) {
+                                                var tgzfn = path.join(tmppath, 'firmware.tgz');
+                                                log.info('downloading to: ' + tgzfn);
+                                                var tgzf = fs.createWriteStream(tgzfn);
+                                                var request = http.get(msg.URL, function(res) {
+                                                        res.pipe(tgzf);
+                                                        tgzf.on('finish', function() {
+                                                                tgzf.close(function() {
+                                                                        targz.decompress({ src: tgzfn, dest: tmppath }, function(err) {
+                                                                                if (!err) {
+                                                                                        var infofn = path.join(tmppath, 'info');
+                                                                                        var inford = readline.createInterface({ input: fs.createReadStream(infofn) });
+                                                                                        var info = {};
+                                                                                        inford.on('line', function (line) {
+                                                                                                var linesplit = line.split('=');
+                                                                                                if (linesplit.length == 2 && linesplit[0].indexOf('#') == -1 && linesplit[1].indexOf('#') == -1)
+                                                                                                        info[linesplit[0].trim().toLowerCase()] = linesplit[1].trim();
+                                                                                        });
+                                                                                        inford.on('close', function () {
+                                                                                                if (info.typecode) {
+                                                                                                        var fwdir = path.join('/opt/hm/firmware', info.typecode);
+                                                                                                        if (fs.existsSync(fwdir))
+                                                                                                                fs.removeSync(fwdir);
+                                                                                                        fs.mkdirSync(fwdir);
+                                                                                                        var files = fs.readdirSync(tmppath);
+                                                                                                        for (var i = 0; i < files.length; i++) {
+                                                                                                                if (files[i] != 'firmware.tgz')
+                                                                                                                        fs.copySync(path.join(tmppath, files[i]), path.join(fwdir, files[i]));
+                                                                                                        }
+                                                                                                        self.rpcSend('refreshDeployedDeviceFirmwareList', [], function(err, data) {});
+//                                                                                                        cleanupCallback();
+                                                                                                }
+                                                                                        });
+                                                                                }
+                                                                        });
+                                                                });
+                                                        });
+                                                });
+                                        }
+                                });
+			}
+			//this.rpcSend('refreshDeployedDeviceFirmwareList', [], function(err, data) {});
+			break;
         }
 };
 
@@ -256,6 +314,15 @@ Homematic.prototype.node = function(nodeid, command, message) {
 						self.emit("node parameters", self, nodeid, data);
 					});
 			});
+                        break;
+		case "delete":
+                        this.rpcSend('deleteDevice', [nodeid, 1], function(err, data) {});
+                        break;
+                case "update":
+                        // for HM: updateFirmware / for HMIP: installFirmware
+                        this.rpcSend('installFirmware', [nodeid], function(err, data) {
+                                self.emit("node update", self, nodeid, data);
+                        });
                         break;
         }
 }
