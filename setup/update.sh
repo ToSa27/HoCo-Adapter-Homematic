@@ -36,13 +36,17 @@ sed -i 's/#CCU2 dualcopro/CCU2 dualcopro/g' /opt/hm/firmware/HM-MOD-UART/fwmap
 
 SETUP_PWD=$PWD
 mv /opt/hm/src/bcm2835_raw_uart /opt/hm/src/bcm2835_raw_uart.backup
-cp -R /opt/hm/src/RaspberryMatic/buildroot-external/package/homematic/kernel-modules/bcm2835_raw_uart /opt/hm/src/
+mkdir /opt/hm/src/bcm2835_raw_uart
 cd /opt/hm/src/bcm2835_raw_uart
+wget https://raw.githubusercontent.com/jens-maus/RaspberryMatic/master/buildroot-external/package/homematic/kernel-modules/bcm2835_raw_uart/bcm2835_raw_uart.c
+wget https://raw.githubusercontent.com/jens-maus/RaspberryMatic/master/buildroot-external/package/homematic/kernel-modules/bcm2835_raw_uart/Makefile
 make
 sudo make -C /lib/modules/`uname -r`/build M=/opt/hm/src/bcm2835_raw_uart modules_install
 mv /opt/hm/src/eq3_char_loop /opt/hm/src/eq3_char_loop.backup
-cp -R /opt/hm/src/RaspberryMatic/buildroot-external/package/homematic/kernel-modules/eq3_char_loop /opt/hm/src/
+mkdir /opt/hm/src/eq3_char_loop
 cd /opt/hm/src/eq3_char_loop
+wget https://raw.githubusercontent.com/jens-maus/RaspberryMatic/master/buildroot-external/package/homematic/kernel-modules/eq3_char_loop/eq3_char_loop.c
+wget https://raw.githubusercontent.com/jens-maus/RaspberryMatic/master/buildroot-external/package/homematic/kernel-modules/eq3_char_loop/Makefile
 make
 sudo make -C /lib/modules/`uname -r`/build M=/opt/hm/src/eq3_char_loop modules_install
 sudo depmod

@@ -229,6 +229,12 @@ Homematic.prototype.adapter = function(command, message) {
         var self = this;
 	log.debug('homematic adapter: ' + command + ': ' + JSON.stringify(message));
         switch (command) {
+		case "all":
+			this.rpcSend('getServiceMessages', [], function(err, data) {
+				for (var i = 0; i < data.length; i++)
+					log.debug("ServiceMessage: " + JSON.stringify(data));
+			});
+			break;
 		case "details":
 			this.rpcSend('listBidcosInterfaces', [], function(err, data) {
 				self.emit("adapter details", self, data);
@@ -319,10 +325,14 @@ Homematic.prototype.node = function(nodeid, command, message) {
                         this.rpcSend('deleteDevice', [nodeid, 1], function(err, data) {});
                         break;
                 case "update":
-                        // for HM: updateFirmware / for HMIP: installFirmware
-                        this.rpcSend('installFirmware', [nodeid], function(err, data) {
-                                self.emit("node update", self, nodeid, data);
-                        });
+			if (this.config.type == 'homematic')
+				this.rpcSend('updateFirmware', [nodeid], function(err, data) {
+					self.emit("node update", self, nodeid, data);
+				});
+			else if (this.config.type == 'homematicip')
+	                        this.rpcSend('installFirmware', [nodeid], function(err, data) {
+        	                        self.emit("node update", self, nodeid, data);
+                	        });
                         break;
         }
 }
