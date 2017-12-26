@@ -1,6 +1,7 @@
 #!/bin/bash
 cd "${0%/*}"
 . ${HOCO_HOME}/data/config.sh
+
 sudo apt-get install -y raspberrypi-kernel-headers libusb-1.0-0 oracle-java8-jdk
 sudo mkdir /opt/hm
 sudo chown $HOCO_USER:$HOCO_USER /opt/hm
@@ -32,17 +33,23 @@ sed -i 's/#CCU2 dualcopro/CCU2 dualcopro/g' /opt/hm/firmware/HM-MOD-UART/fwmap
 SETUP_PWD=$PWD
 mkdir /opt/hm/src/bcm2835_raw_uart
 cd /opt/hm/src/bcm2835_raw_uart
-wget https://raw.githubusercontent.com/jens-maus/RaspberryMatic/master/buildroot-external/package/homematic/kernel-modules/bcm2835_raw_uart/bcm2835_raw_uart.c
-wget https://raw.githubusercontent.com/jens-maus/RaspberryMatic/master/buildroot-external/package/homematic/kernel-modules/bcm2835_raw_uart/Makefile
+wget https://raw.githubusercontent.com/jens-maus/RaspberryMatic/master/buildroot-external/package/occu/kernel-modules/bcm2835_raw_uart/bcm2835_raw_uart.c
+wget https://raw.githubusercontent.com/jens-maus/RaspberryMatic/master/buildroot-external/package/occu/kernel-modules/bcm2835_raw_uart/Makefile
 make
 sudo make -C /lib/modules/`uname -r`/build M=/opt/hm/src/bcm2835_raw_uart modules_install
 mkdir /opt/hm/src/eq3_char_loop
 cd /opt/hm/src/eq3_char_loop
-wget https://raw.githubusercontent.com/jens-maus/RaspberryMatic/master/buildroot-external/package/homematic/kernel-modules/eq3_char_loop/eq3_char_loop.c
-wget https://raw.githubusercontent.com/jens-maus/RaspberryMatic/master/buildroot-external/package/homematic/kernel-modules/eq3_char_loop/Makefile
+wget https://raw.githubusercontent.com/jens-maus/RaspberryMatic/master/buildroot-external/package/occu/kernel-modules/eq3_char_loop/eq3_char_loop.c
+wget https://raw.githubusercontent.com/jens-maus/RaspberryMatic/master/buildroot-external/package/occu/kernel-modules/eq3_char_loop/Makefile
 make
 sudo make -C /lib/modules/`uname -r`/build M=/opt/hm/src/eq3_char_loop modules_install
 sudo depmod
+mkdir /opt/hm/src/overlay
+cd /opt/hm/src/overlay
+wget https://raw.githubusercontent.com/jens-maus/RaspberryMatic/master/buildroot-external/package/occu/kernel-modules/bcm2835_raw_uart/bcm2835-raw-uart.dts
+dtc -@ -I dts -O dtb -o bcm2835-raw-uart.dtbo bcm2835-raw-uart.dts
+sudo cp bcm2835-raw-uart.dtbo /boot/overlays/
+sudo su -c "echo 'dtoverlay=bcm2835-raw-uart' >> /boot/config.txt"
 cd $SETUP_PWD
 
 sudo su -c "echo 'PATH=\$PATH:/opt/hm/bin' > /etc/profile.d/homematic.sh"
