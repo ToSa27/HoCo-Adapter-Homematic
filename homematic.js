@@ -216,7 +216,7 @@ Homematic.prototype.setKey = function(key) {
   if (key) {
     log.info("Setting new key.");
     try {
-      require('child_process').execSync('crypttool -v -t 3 -k ' + config.key, {stdio:[0,1,2$
+      require('child_process').execSync('crypttool -v -t 3 -k ' + config.key, {stdio:[0,1,2]});
       log.warn("New key matches current key.");
     } catch(ex) {
       log.info("New key does not match current key.");
