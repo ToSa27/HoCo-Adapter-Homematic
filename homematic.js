@@ -141,6 +141,8 @@ function Homematic(config) {
 					self.connected = false;
 					self.emit("disconnected", self);
 				} else {
+					if (self.config.key)
+						self.setKey(self.config.key);
 			                self.connected = true;
 	         			self.emit("connected", self, self.id);
 				}
@@ -156,6 +158,8 @@ function Homematic(config) {
                                 self.connected = false;
                                 self.emit("disconnected", self);
                         } else {
+				if (self.config.key)
+					self.setKey(self.config.key);
                                 self.connected = true;
                                 self.emit("connected", self, self.id);
                         }
@@ -206,6 +210,35 @@ convertHmIPKeyBase32ToBase16 = function(valueString) {
   }
 
   return keyString.toUpperCase();
+};
+
+Homematic.prototype.setKey = function(key) {
+  if (key) {
+    log.info("Setting new key.");
+    try {
+      require('child_process').execSync('crypttool -v -t 3 -k ' + config.key, {stdio:[0,1,2$
+      log.warn("New key matches current key.");
+    } catch(ex) {
+      log.info("New key does not match current key.");
+      //xmlrpc $RFD_URL changeKey $key
+      this.rpcSend('getServiceMessages', [], function(err, data) {
+        if (err)
+          log.warn("Error sending changeKey command: " + err);
+        else {
+          log.info("Successfully sent changeKey command.");
+          var indexBuf = require('child_process').execSync('crypttool -g | grep "Current user key" | cut -d" " -f5');
+          var index = parseInt(indexBuf.toString(), 10) + 1;
+          log.info("New key index: " + index.toString());
+          try {
+            require('child_process').execSync('crypttool -S -k ' + config.key + ' -i ' + index.toString(), {stdio:[0,1,2]});
+            log.info("Successfully stored new key.");
+          } catch (ex) {
+            log.warn("Failed to store new key.");
+          }
+        }
+      });
+    }
+  }
 };
 
 Homematic.prototype.rpcSend = function(fn, args, cb) {

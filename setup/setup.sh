@@ -94,7 +94,8 @@ echo '   "protocol": "binrpc",'>> config.json
 echo '   "rfd_host": "127.0.0.1",'>> config.json
 echo '   "rfd_port": 2001,'>> config.json
 echo '   "interface_host": "127.0.0.1",'>> config.json
-echo '   "interface_port": 2016'>> config.json
+echo '   "interface_port": 2016,'>> config.json
+echo '   "key": "'${HOCO_HOMEMATIC_KEY}'"'>> config.json
 echo '  },'>> config.json
 echo '  {'>> config.json
 echo '   "type": "homematicip",'>> config.json
