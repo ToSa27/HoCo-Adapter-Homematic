@@ -20,10 +20,11 @@
   },
   "homepage": "https://github.com/ToSa27/HoCo-Adapter-Homematic#readme",
   "dependencies": {
-    "binrpc": "^1.0.0",
+    "binrpc": "^3.1.0",
     "fs-extra": "^2.1.2",
     "homematic-xmlrpc": "^1.0.2",
     "targz": "^1.0.1",
-    "tmp": "0.0.31"
+    "tmp": "0.0.31",
+    "yalm": "^4.1.0"
   }
 }

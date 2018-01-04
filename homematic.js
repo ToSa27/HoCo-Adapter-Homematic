@@ -10,30 +10,33 @@ const tmp = require('tmp');
 const targz = require('targz');
 const readline = require('readline');
 
+const serialfilename = '/opt/hm/var/board_serial';
+const cryptfilename = '/opt/hm/etc/config/crypttool.cfg';
+
 function Homematic(config) {
 	log.debug("homematic config: " + JSON.stringify(config));
 	EventEmitter.call(this);
 	var self = this;
 	this.config = config;
-	this.id = fs.readFileSync("/opt/hm/var/rf_serial", "utf-8").trim();
+	this.id = fs.readFileSync(serialfilename, "utf-8").trim();
 	this.connected = false;
 
 	if (this.config.protocol == 'binrpc') {
 	        this.server = binrpc.createServer({
         	        host: this.config.interface_host,
                 	port: this.config.interface_port
-        });
+	        });
 	} else if (this.config.protocol == 'xmlrpc') {
 	        this.server = xmlrpc.createServer({
         	        host: this.config.interface_host,
                 	port: this.config.interface_port
-        });
+        	});
 	} else {
 		log.err('unknown protocol: ' + this.config.protocol);
 	}
 
 	this.server.on('NotFound', function (method, params) {
-		log.err('homematic server not found');
+		log.err('homematic method not found: ' + method);
 	});
 
 	this.server.on('system.multicall', function (method, params, callback) {
@@ -119,52 +122,36 @@ function Homematic(config) {
 		}
 	};
 
-	if (this.config.protocol == 'binrpc') {
-		this.client = binrpc.createClient({
-		        host: this.config.rfd_host,
-        		port: this.config.rfd_port,
-        		path: '/'
-		});
-	} else {
-                this.client = xmlrpc.createClient({
-                        host: this.config.rfd_host,
-                        port: this.config.rfd_port,
-                        path: '/'
-                });
-	}
-
-	if (this.config.protocol == 'binrpc') {
-		this.client.on('connect', function () {
-			var initUrl = 'xmlrpc_bin://' + self.config.interface_host + ':' + self.config.interface_port;
-			self.rpcSend('init', [initUrl, self.id], function(err, data) {
-				if (err) {
-					self.connected = false;
-					self.emit("disconnected", self);
-				} else {
-					if (self.config.key)
-						self.setKey(self.config.key);
-			                self.connected = true;
-	         			self.emit("connected", self, self.id);
-				}
-			});
-		});
-	        this.client.on('error', function (e) {
-	                log.err(e);
-	        });
-	} else {
-                var initUrl = 'http://' + self.config.interface_host + ':' + self.config.interface_port;
-                self.rpcSend('init', [initUrl, self.id], function(err, data) {
+	setTimeout(() => {
+		var initUrl = '';
+		if (this.config.protocol == 'binrpc') {
+			this.client = binrpc.createClient({
+	                        host: this.config.rfd_host,
+        	                port: this.config.rfd_port
+                	});
+			initUrl = 'xmlrpc_bin://' + self.config.interface_host + ':' + self.config.interface_port;
+		} else if (this.config.protocol == 'xmlrpc') {
+                        this.client = xmlrpc.createClient({
+                                host: this.config.rfd_host,
+                                port: this.config.rfd_port
+                        });
+                        initUrl = 'http://' + self.config.interface_host + ':' + self.config.interface_port;
+		}
+//                this.client.on('error', function (e) {
+//                        log.err(e);
+//                });
+                self.rpcSend('init', [initUrl, self.id], (err, data) => {
                         if (err) {
                                 self.connected = false;
                                 self.emit("disconnected", self);
                         } else {
-				if (self.config.key)
-					self.setKey(self.config.key);
-                                self.connected = true;
-                                self.emit("connected", self, self.id);
-                        }
+                        	if (self.config.key)
+	                        	self.setKey(self.config.key);
+	                        self.connected = true;
+	                        self.emit("connected", self, self.id);
+	                }
                 });
-	}
+	}, 2000);
 };
 
 util.inherits(Homematic, EventEmitter)
@@ -216,21 +203,20 @@ Homematic.prototype.setKey = function(key) {
   if (key) {
     log.info("Setting new key.");
     try {
-      require('child_process').execSync('crypttool -v -t 3 -k ' + config.key, {stdio:[0,1,2]});
+      require('child_process').execSync('/opt/hm/bin/crypttool -v -t 3 -k ' + key + ' -f ' + cryptfilename, {stdio:[0,1,2]});
       log.warn("New key matches current key.");
     } catch(ex) {
       log.info("New key does not match current key.");
-      //xmlrpc $RFD_URL changeKey $key
-      this.rpcSend('getServiceMessages', [], function(err, data) {
+      this.rpcSend('changeKey', [ key ], function(err, data) {
         if (err)
           log.warn("Error sending changeKey command: " + err);
         else {
           log.info("Successfully sent changeKey command.");
-          var indexBuf = require('child_process').execSync('crypttool -g | grep "Current user key" | cut -d" " -f5');
+          var indexBuf = require('child_process').execSync('/opt/hm/bin/crypttool -g -f ' + cryptfilename + ' | /bin/grep "Current user key" | /usr/bin/cut -d" " -f5');
           var index = parseInt(indexBuf.toString(), 10) + 1;
           log.info("New key index: " + index.toString());
           try {
-            require('child_process').execSync('crypttool -S -k ' + config.key + ' -i ' + index.toString(), {stdio:[0,1,2]});
+            require('child_process').execSync('/opt/hm/bin/crypttool -S -k ' + key + ' -i ' + index.toString() + ' -f ' + cryptfilename, {stdio:[0,1,2]});
             log.info("Successfully stored new key.");
           } catch (ex) {
             log.warn("Failed to store new key.");
