@@ -13,7 +13,7 @@ PATH=/sbin:/usr/sbin:/bin:/usr/bin:/opt/hm/bin
 DESC="HomeMatic multimacd interface process"
 NAME=multimacd
 DAEMON=/opt/hm/bin/$NAME
-DAEMON_ARGS="-f /opt/hm/etc/multimacd.conf -l 0"
+DAEMON_ARGS="-f /opt/hm/etc/multimacd.conf -l 3"
 PIDFILE=/opt/hm/var/status/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 

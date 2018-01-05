@@ -13,8 +13,8 @@ PATH=/sbin:/usr/sbin:/bin:/usr/bin:/opt/hm/bin
 DESC="HomeMatic BidCoS-RF interface process"
 NAME=rfd
 DAEMON=/opt/hm/bin/$NAME
-DAEMON_ARGS="-f /opt/hm/etc/rfd.conf -d"
-PIDFILE=/opt/hm/var/rfd/$NAME.pid
+DAEMON_ARGS="-f /opt/hm/etc/rfd.conf -l 3"
+PIDFILE=/opt/hm/var/status/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 USER=hoco
 
@@ -23,27 +23,55 @@ USER=hoco
 . /lib/init/vars.sh
 . /lib/lsb/init-functions
 
-if [ ! -d /sys/class/gpio/gpio18 ] ; then
-  echo 18 > /sys/class/gpio/export
-  echo out > /sys/class/gpio/gpio18/direction
-fi
+waitStartupComplete() {
+  STEPS=20
+  for i in $(seq 1 $STEPS)
+  do
+    sleep 2
+    echo -n "."
+    RFDSTATUSPID=`cat /var/status/rfd.status 2>&1`
+    RFDPID=`pidof rfd`
+    if [ "$RFDSTATUSPID" = "$RFDPID" ]
+    then
+      echo "OK"
+      break
+    fi
+    if [ $i -eq $STEPS ]
+    then
+      echo "ERROR"
+    fi
+  done
+}
 
 case "$1" in
   start)
     log_daemon_msg "Starting $DESC" "$NAME"
+    UART_GPIO=18
     chown root:dialout /dev/mmd_bidcos
     chmod 660 /dev/mmd_bidcos
-    start-stop-daemon --start --quiet -c $USER --exec $DAEMON -- $DAEMON_ARGS
+    echo 0 >/sys/class/gpio/gpio${UART_GPIO}/value
+    sleep 0.2
+    echo 1 >/sys/class/gpio/gpio${UART_GPIO}/value
+    sleep 2
+    touch /var/status/rfd.status
+    chmod a+w /var/status/rfd.status
+    start-stop-daemon -S -q -b -m -p $PIDFILE -c $USER --exec $DAEMON -- $DAEMON_ARGS
     ;;
   stop)
     log_daemon_msg "Stopping $DESC" "$NAME"
-    start-stop-daemon -K -q -u $USER -n $NAME
+    start-stop-daemon -K -q -p $PIDFILE
+    rm -f $PIDFILE
+    ;;
+  restart)
+    stop
+    sleep 1
+    start
     ;;
   status)
     status_of_proc "$DAEMON" "$NAME" && exit 0 || exit $?
     ;;
   *)
-    echo "Usage: $SCRIPTNAME {start|stop|status}" >&2
+    echo "Usage: $SCRIPTNAME {start|stop|restart|status}" >&2
     exit 3
     ;;
 esac
