@@ -44,12 +44,12 @@ wget https://raw.githubusercontent.com/jens-maus/RaspberryMatic/master/buildroot
 make
 sudo make -C /lib/modules/`uname -r`/build M=/opt/hm/src/eq3_char_loop modules_install
 sudo depmod
-mkdir /opt/hm/src/overlay
-cd /opt/hm/src/overlay
-wget https://raw.githubusercontent.com/jens-maus/RaspberryMatic/master/buildroot-external/package/occu/kernel-modules/bcm2835_raw_uart/bcm2835-raw-uart.dts
-dtc -@ -I dts -O dtb -o bcm2835-raw-uart.dtbo bcm2835-raw-uart.dts
-sudo cp bcm2835-raw-uart.dtbo /boot/overlays/
-sudo su -c "echo 'dtoverlay=bcm2835-raw-uart' >> /boot/config.txt"
+#mkdir /opt/hm/src/overlay
+#cd /opt/hm/src/overlay
+#wget https://raw.githubusercontent.com/jens-maus/RaspberryMatic/master/buildroot-external/package/occu/kernel-modules/bcm2835_raw_uart/bcm2835-raw-uart.dts
+#dtc -@ -I dts -O dtb -o bcm2835-raw-uart.dtbo bcm2835-raw-uart.dts
+#sudo cp bcm2835-raw-uart.dtbo /boot/overlays/
+#sudo su -c "echo 'dtoverlay=bcm2835-raw-uart' >> /boot/config.txt"
 cd $SETUP_PWD
 
 sudo su -c "echo 'PATH=\$PATH:/opt/hm/bin' > /etc/profile.d/homematic.sh"

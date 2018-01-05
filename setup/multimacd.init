@@ -13,8 +13,8 @@ PATH=/sbin:/usr/sbin:/bin:/usr/bin:/opt/hm/bin
 DESC="HomeMatic multimacd interface process"
 NAME=multimacd
 DAEMON=/opt/hm/bin/$NAME
-DAEMON_ARGS="-f /opt/hm/etc/multimacd.conf -l 5"
-PIDFILE=/opt/hm/var/rfd/$NAME.pid
+DAEMON_ARGS="-f /opt/hm/etc/multimacd.conf -l 0"
+PIDFILE=/opt/hm/var/status/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
 [ -x "$DAEMON" ] || exit 0
@@ -22,36 +22,112 @@ SCRIPTNAME=/etc/init.d/$NAME
 . /lib/init/vars.sh
 . /lib/lsb/init-functions
 
+waitStartupComplete() {
+  STEPS=5
+  for i in $(seq 1 $STEPS)
+  do
+    sleep 2
+    echo -n "."
+    MMDSTATUSPID=`cat /var/status/multimacd.status 2>&1`
+    MMDPID=`pidof multimacd`
+    if [ "$MMDSTATUSPID" = "$MMDPID" ]
+    then
+      echo "OK"
+      break
+    fi
+    if [ $i -eq $STEPS ]
+    then
+      echo "ERROR"
+    fi
+  done
+}
+
 case "$1" in
   start)
     log_daemon_msg "Starting $DESC" "$NAME"
-    modprobe bcm2835_raw_uart
+
+    #HOST="rpi2"
+    #HM_MODE="NORMAL"
+    #HMRF_DEV="HM-MOD-RPI-PCB"
+    #HMRF_DEVNODE="/dev/bcm2835-raw-uart"
+    #HMIP_DEV="HM-MOD-RPI-PCB"
+    #HMIP_DEVNODE="/dev/bcm2835-raw-uart"
+    UART_BASE="0x3f201000"
+    UART_IRQ="87"
+    #UART_DEV="/dev/ttyAMA0"
+    UART_GPIO=18
+    RPI_PCB_DEVNODE="/dev/bcm2835-raw-uart"
+
+    #modprobe bcm2835_wdt nowayout=1 heartbeat=15
+    #modprobe tun
+
+    modprobe bcm2835_raw_uart uart0_base=${UART_BASE} uart0_irq=${UART_IRQ}
     chown root:dialout /dev/bcm2835-raw-uart
     chmod 660 /dev/bcm2835-raw-uart
-    eq3configcmd update-coprocessor -p /dev/bcm2835-raw-uart -d /opt/hm/firmware/HM-MOD-UART -c -u
-    RF_SERIAL=$(eq3configcmd update-coprocessor -p /dev/bcm2835-raw-uart -c -se 2>&1 | grep "SerialNumber:" | cut -d' ' -f5)
-    echo $RF_SERIAL > /opt/hm/var/rf_serial
-    chown hoco:hoco /opt/hm/var/rf_serial
-    RF_VERSION=$(eq3configcmd update-coprocessor -p /dev/bcm2835-raw-uart -c -v 2>&1 | grep "Version:" | cut -d' ' -f5)
-    echo $RF_VERSION > /opt/hm/var/rf_version
-    chown hoco:hoco /opt/hm/var/rf_version
-    RF_ADDRESS=$(eq3configcmd read-default-rf-address -f /dev/bcm2835-raw-uart -h 2>&1 | grep "^0x")
-    echo $RF_ADDRESS > /opt/hm/var/rf_address
-    chown hoco:hoco /opt/hm/var/rf_address
     modprobe eq3_char_loop
     chown root:dialout /dev/eq3loop
     chmod 660 /dev/eq3loop
+
+    RF_SERIAL=$(/bin/eq3configcmd update-coprocessor -p ${RPI_PCB_DEVNODE} -t HM-MOD-UART -c -se 2>&1 | grep "SerialNumber:" | cut -d' ' -f5 | tr -d '[:space:]')
+    echo $RF_SERIAL > /opt/hm/var/rf_serial
+    chown hoco:hoco /opt/hm/var/rf_serial
+    RF_VERSION=$(/bin/eq3configcmd update-coprocessor -p ${RPI_PCB_DEVNODE} -t HM-MOD-UART -c -v 2>&1 | grep "Version:" | cut -d' ' -f5 | tr -d '[:space:]')
+    echo $RF_VERSION > /opt/hm/var/rf_version
+    chown hoco:hoco /opt/hm/var/rf_version
+    RF_ADDRESS=$(/bin/eq3configcmd read-default-rf-address -f ${RPI_PCB_DEVNODE} -h 2>&1 | grep "^0x" | tr -d '[:space:]')
+    echo $RF_ADDRESS > /opt/hm/var/rf_address
+    chown hoco:hoco /opt/hm/var/rf_address
+
+    #echo "HOST=${HOST}" >/var/hm_mode
+    #echo "HM_MODE=${HM_MODE}" >>/var/hm_mode
+    #echo "HMRF_DEV=${HMRF_DEV}" >>/var/hm_mode
+    #echo "HMRF_DEVNODE=${HMRF_DEVNODE}" >>/var/hm_mode
+    #echo "HMIP_DEV=${HMIP_DEV}" >>/var/hm_mode
+    #echo "HMIP_DEVNODE=${HMIP_DEVNODE}" >>/var/hm_mode
+    #echo "UART_GPIO=${UART_GPIO}" >>/var/hm_mode
+
+    if [ ! -d /sys/class/gpio/gpio${UART_GPIO} ]; then
+      echo ${UART_GPIO} >/sys/class/gpio/export
+      sleep 1
+    fi
+    echo out >/sys/class/gpio/gpio${UART_GPIO}/direction
+    sleep 1
+    echo 1 >/sys/class/gpio/gpio${UART_GPIO}/value
+    sleep 1
+    echo 0 >/sys/class/gpio/gpio${UART_GPIO}/value
+    sleep 1
+    echo 1 >/sys/class/gpio/gpio${UART_GPIO}/value
+
+    eq3configcmd update-coprocessor -p ${RPI_PCB_DEVNODE} -t HM-MOD-UART -u -d /opt/hm/firmware/HM-MOD-UART
+    if [ $? -ne 0 ]; then
+      echo -n "forcing, "
+      eq3configcmd update-coprocessor -p ${RPI_PCB_DEVNODE} -t HM-MOD-UART -u -f -d /opt/hm/firmware/HM-MOD-UART
+    fi
+    RF_VERSION=$(/bin/eq3configcmd update-coprocessor -p ${RPI_PCB_DEVNODE} -t HM-MOD-UART -c -v 2>&1 | grep "Version:" | cut -d' ' -f5)
+    echo $RF_VERSION > /opt/hm/var/rf_version
+    chown hoco:hoco /opt/hm/var/rf_version
+
+    if [ -c /dev/ttyS0 ]; then
+      mv /dev/ttyS0 /dev/ttyS1
+    fi
     start-stop-daemon -S -N -10 -q -b -m -p $PIDFILE --exec $DAEMON -- $DAEMON_ARGS
+    waitStartupComplete
     ;;
   stop)
     log_daemon_msg "Stopping $DESC" "$NAME"
     start-stop-daemon -K -q -p $PIDFILE
+    rm -f $PIDFILE
+    ;;
+  restart)
+    stop
+    sleep 1
+    start
     ;;
   status)
     status_of_proc "$DAEMON" "$NAME" && exit 0 || exit $?
     ;;
   *)
-    echo "Usage: $SCRIPTNAME {start|stop|status}" >&2
+    echo "Usage: $SCRIPTNAME {start|stop|restart|status}" >&2
     exit 3
     ;;
 esac
