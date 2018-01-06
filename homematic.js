@@ -10,7 +10,7 @@ const tmp = require('tmp');
 const targz = require('targz');
 const readline = require('readline');
 
-const serialfilename = '/opt/hm/var/board_serial';
+const serialfilename = '/opt/hm/var/rf_serial';
 const cryptfilename = '/opt/hm/etc/config/crypttool.cfg';
 
 function Homematic(config) {
