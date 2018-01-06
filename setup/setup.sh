@@ -8,9 +8,14 @@ sudo chown $HOCO_USER:$HOCO_USER /opt/hm
 mkdir /opt/hm/src
 mkdir /opt/hm/etc
 mkdir /opt/hm/etc/config
+mkdir /opt/hm/etc/config/crRFD
+mkdir /opt/hm/etc/config/hmip
+mkdir /opt/hm/etc/measurement
+mkdir /opt/hm/etc/templates
 mkdir /opt/hm/etc/rfd
 mkdir /opt/hm/var
 mkdir /opt/hm/var/log
+mkdir /opt/hm/var/measurement
 mkdir /opt/hm/var/rfd
 mkdir /opt/hm/var/rfd/devices
 mkdir /opt/hm/var/status
@@ -23,7 +28,9 @@ cp -R /opt/hm/src/occu/arm-gnueabihf/packages-eQ-3/RFD/bin /opt/hm/
 cp -R /opt/hm/src/occu/HMserver/opt/HMServer /opt/hm/
 cp /opt/hm/src/occu/arm-gnueabihf/packages-eQ-3/LinuxBasis/bin/eq3configcmd /opt/hm/bin/
 cp /opt/hm/src/occu/arm-gnueabihf/packages-eQ-3/LinuxBasis/lib/libeq3config.so /opt/hm/lib/
-cp /opt/hm/src/occu/arm-gnueabihf/packages-eQ-3/RFD/etc/config_templates/hmip_networkkey.conf /opt/hm/etc/
+cp /opt/hm/src/occu/arm-gnueabihf/packages-eQ-3/RFD/opt/HmIP/legacy-parameter-definition.config /opt/hm/etc/
+cp /opt/hm/src/occu/HMserver/opt/HMServer/measurement/templates.dit /opt/hm/etc/templates/
+#cp /opt/hm/src/occu/arm-gnueabihf/packages-eQ-3/RFD/etc/config_templates/hmip_networkkey.conf /opt/hm/etc/
 
 sed -i 's/\t/ /g' /opt/hm/firmware/HM-MOD-UART/fwmap
 sed -i 's/  */ /g' /opt/hm/firmware/HM-MOD-UART/fwmap

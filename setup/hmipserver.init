@@ -12,15 +12,31 @@
 DESC="HomeMaticIP server process"
 NAME=hmipserver
 DAEMON=/usr/bin/java
-DAEMON_ARGS="-Xmx128m -Dlog4j.configuration=file:///opt/hm/etc/log4j.xml -Dfile.encoding=ISO-8859-1 -jar /opt/hm/HMServer/HMIPServer.jar /opt/hm/etc/crRFD.conf /opt/hm/etc/hmserver.conf"
-PIDFILE=/opt/hm/var/$NAME.pid
+DAEMON_ARGS="-Xmx128m -Dos.arch=arm -Dlog4j.configuration=file:///opt/hm/etc/log4j.xml -Dfile.encoding=ISO-8859-1 -jar /opt/hm/HMServer/HMIPServer.jar /opt/hm/etc/crRFD.conf /opt/hm/etc/hmserver.conf"
+PIDFILE=/opt/hm/var/status/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 USER=hoco
+STARTWAITFILE=/var/status/HMServerStarted
 
 [ -x "$DAEMON" ] || exit 0
 
 . /lib/init/vars.sh
 . /lib/lsb/init-functions
+
+waitStartupComplete() {
+  STEPS=150
+  for i in $(seq 1 $STEPS); do
+    sleep 2
+    echo -n "."
+    if [ -e ${STARTWAITFILE} ]; then
+      echo "OK"
+      break
+    fi
+    if [ ${i} -eq ${STEPS} ]; then
+      echo "ERROR"
+    fi
+  done
+}
 
 case "$1" in
   start)
@@ -28,18 +44,24 @@ case "$1" in
     chown root:dialout /dev/ttyS0
     chmod 660 /dev/ttyS0
     export PATH=/sbin:/usr/sbin:/bin:/usr/bin:/opt/hm/bin
-    start-stop-daemon -S -q -m -p $PIDFILE -c $USER --exec $DAEMON -- $DAEMON_ARGS &
+    start-stop-daemon -b -S -q -m -p $PIDFILE -c $USER --exec $DAEMON -- $DAEMON_ARGS
+    waitStartupComplete
     ;;
   stop)
     log_daemon_msg "Stopping $DESC" "$NAME"
     start-stop-daemon -K -q -p $PIDFILE
     rm -f $PIDFILE
     ;;
+  restart)
+    stop
+    sleep 1
+    start
+    ;;
   status)
     status_of_proc "$DAEMON" "$NAME" && exit 0 || exit $?
     ;;
   *)
-    echo "Usage: $SCRIPTNAME {start|stop|status}" >&2
+    echo "Usage: $SCRIPTNAME {start|stop|restart|status}" >&2
     exit 3
     ;;
 esac
