@@ -44,6 +44,7 @@ case "$1" in
     chown root:dialout /dev/ttyS0
     chmod 660 /dev/ttyS0
     export PATH=/sbin:/usr/sbin:/bin:/usr/bin:/opt/hm/bin
+    chmod a+w /var/status
     start-stop-daemon -b -S -q -m -p $PIDFILE -c $USER --exec $DAEMON -- $DAEMON_ARGS
     waitStartupComplete
     ;;

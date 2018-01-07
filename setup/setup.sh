@@ -77,7 +77,7 @@ cp crRFD.conf /opt/hm/etc/
 cp log4j.xml /opt/hm/etc/
 cp hmserver.conf /opt/hm/etc/
 cp InterfacesList.xml /opt/hm/etc/
-cp LegacyService.handlers /opt/hm/var/
+touch /opt/hm/var/LegacyService.handlers
 sudo cp multimacd.init /etc/init.d/multimacd
 sudo chmod a+x /etc/init.d/multimacd
 sudo update-rc.d multimacd defaults
